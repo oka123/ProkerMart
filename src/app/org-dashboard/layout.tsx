@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { 
+import {
   Building2,
   Store,
   PieChart,
-  Settings,
   LogOut,
   PlusCircle,
-  FileText
+  FileText,
 } from "lucide-react";
+import { Logo } from "@/components/Logo";
 
 export default function OrgDashboardLayout({
   children,
@@ -20,31 +20,34 @@ export default function OrgDashboardLayout({
   const pathname = usePathname();
 
   const navigation = [
-    { name: 'Ringkasan Organisasi', href: '/org-dashboard', icon: PieChart },
-    { name: 'Manajemen Sub-Toko', href: '/org-dashboard/stores', icon: Store },
-    { name: 'Daftarkan Proker Baru', href: '/org-dashboard/new-proker', icon: PlusCircle },
-    { name: 'Laporan Agregat', href: '/org-dashboard/reports', icon: FileText },
-    { name: 'Profil Organisasi', href: '/org-dashboard/settings', icon: Building2 },
+    { name: "Ringkasan Organisasi", href: "/org-dashboard", icon: PieChart },
+    { name: "Manajemen Sub-Toko", href: "/org-dashboard/stores", icon: Store },
+    {
+      name: "Daftarkan Proker Baru",
+      href: "/org-dashboard/new-proker",
+      icon: PlusCircle,
+    },
+    { name: "Laporan Agregat", href: "/org-dashboard/reports", icon: FileText },
+    {
+      name: "Profil Organisasi",
+      href: "/org-dashboard/settings",
+      icon: Building2,
+    },
   ];
 
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
-      <div className="w-64 bg-slate-900 text-slate-300 flex flex-col hidden md:flex">
+      <div className="w-64 bg-slate-900 text-slate-300  flex-col hidden md:flex">
         <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950">
-          <Link href="/" className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-gradient-to-br from-primary-500 to-secondary-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">P</span>
-            </div>
-            <span className="font-bold text-xl text-white">
-              ProkerMart
-            </span>
-          </Link>
+          <Logo />
         </div>
 
         <div className="flex-1 overflow-y-auto py-6 px-4">
           <div className="mb-8 px-2">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">Panel Organisasi</p>
+            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+              Panel Organisasi
+            </p>
             <div className="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
               <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold">
                 BM
@@ -52,7 +55,8 @@ export default function OrgDashboardLayout({
               <div>
                 <p className="text-sm font-bold text-white">BEM FMIPA</p>
                 <p className="text-xs text-emerald-400 flex items-center gap-1">
-                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span> Terverifikasi
+                  <span className="w-2 h-2 rounded-full bg-emerald-400"></span>{" "}
+                  Terverifikasi
                 </p>
               </div>
             </div>
@@ -67,12 +71,14 @@ export default function OrgDashboardLayout({
                   key={item.name}
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                    isActive 
-                      ? 'bg-primary-600 text-white' 
-                      : 'text-slate-400 hover:bg-slate-800 hover:text-white'
+                    isActive
+                      ? "bg-primary-600 text-white"
+                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`}
+                  />
                   {item.name}
                 </Link>
               );
@@ -94,7 +100,7 @@ export default function OrgDashboardLayout({
         <header className="bg-slate-900 border-b border-slate-800 h-16 flex items-center px-4 shrink-0 md:hidden">
           <span className="font-bold text-xl text-white">Panel Organisasi</span>
         </header>
-        
+
         {/* Main scrollable content */}
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
           {children}

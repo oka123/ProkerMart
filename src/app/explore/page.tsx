@@ -73,10 +73,17 @@ const mockProducts = [
     tagColor: "bg-blue-100 text-blue-700",
     stock: 100,
     category: "Minuman",
-  }
+  },
 ];
 
-const categories = ["Semua", "Makanan", "Minuman", "Pakaian", "Merchandise", "Jasa"];
+const categories = [
+  "Semua",
+  "Makanan",
+  "Minuman",
+  "Pakaian",
+  "Merchandise",
+  "Jasa",
+];
 
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -84,23 +91,24 @@ export default function ExplorePage() {
 
   // Filtering logic
   const filteredProducts = mockProducts.filter((product) => {
-    const matchesSearch = 
-      product.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    const matchesSearch =
+      product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.orgName.toLowerCase().includes(searchQuery.toLowerCase()) ||
       product.prokerName.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = activeCategory === "Semua" || product.category === activeCategory;
+    const matchesCategory =
+      activeCategory === "Semua" || product.category === activeCategory;
     return matchesSearch && matchesCategory;
   });
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
       <Navbar />
-      
+
       {/* Header Search Section */}
       <div className="bg-white border-b border-slate-200 sticky top-16 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-            <div className="w-full md:w-2/3 relative">
+            <div className="w-full relative">
               <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-slate-400" />
               </div>
@@ -143,11 +151,13 @@ export default function ExplorePage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="mb-6 flex justify-between items-end">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Eksplor Produk</h1>
-            <p className="text-slate-500">Menampilkan {filteredProducts.length} produk dari berbagai proker.</p>
+            <h1 className="text-2xl font-bold text-slate-900">Produk</h1>
+            <p className="text-slate-500">
+              Menampilkan {filteredProducts.length} produk dari berbagai proker.
+            </p>
           </div>
           <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600">
-            Urutkan: 
+            Urutkan:
             <button className="font-semibold flex items-center hover:text-primary-600">
               Terbaru <ChevronDown className="w-4 h-4 ml-1" />
             </button>
@@ -168,12 +178,14 @@ export default function ExplorePage() {
                 <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
                   <ShoppingBag className="w-12 h-12 text-slate-300 group-hover:scale-110 transition-transform duration-500" />
                   <div className="absolute top-3 left-3 flex flex-col gap-1">
-                    <span className={`px-2 py-1 rounded-md text-xs font-bold w-fit ${product.tagColor}`}>
+                    <span
+                      className={`px-2 py-1 rounded-md text-xs font-bold w-fit ${product.tagColor}`}
+                    >
                       {product.tag}
                     </span>
                   </div>
                 </div>
-                
+
                 {/* Product Details */}
                 <div className="p-4 flex flex-col flex-1">
                   <p className="text-xs font-semibold text-primary-600 mb-1 flex items-center gap-1 line-clamp-1">
@@ -183,12 +195,14 @@ export default function ExplorePage() {
                   <h3 className="font-bold text-slate-900 mb-1 group-hover:text-primary-600 transition-colors line-clamp-2">
                     {product.name}
                   </h3>
-                  
+
                   <div className="mt-auto pt-4">
-                    <p className="text-xs text-slate-500 mb-1">Stok: {product.stock}</p>
+                    <p className="text-xs text-slate-500 mb-1">
+                      Stok: {product.stock}
+                    </p>
                     <div className="flex items-center justify-between">
                       <span className="font-extrabold text-primary-600 text-lg">
-                        Rp {product.price.toLocaleString('id-ID')}
+                        Rp {product.price.toLocaleString("id-ID")}
                       </span>
                       <button className="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-colors">
                         +
@@ -204,8 +218,12 @@ export default function ExplorePage() {
             <div className="w-20 h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
               <Search className="w-10 h-10 text-slate-400" />
             </div>
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Produk tidak ditemukan</h3>
-            <p className="text-slate-500">Coba gunakan kata kunci lain atau ubah filter kategori.</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              Produk tidak ditemukan
+            </h3>
+            <p className="text-slate-500">
+              Coba gunakan kata kunci lain atau ubah filter kategori.
+            </p>
           </div>
         )}
       </main>
