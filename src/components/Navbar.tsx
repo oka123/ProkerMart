@@ -26,10 +26,16 @@ export function Navbar() {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-8">
-            <Link href="/explore" className="text-slate-600 hover:text-primary-600 font-medium transition-colors">
+            <Link
+              href="/explore"
+              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+            >
               Eksplor
             </Link>
-            <Link href="/organizations" className="text-slate-600 hover:text-primary-600 font-medium transition-colors">
+            <Link
+              href="/organizations"
+              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+            >
               Organisasi
             </Link>
           </div>
@@ -40,13 +46,22 @@ export function Navbar() {
               <Search className="w-5 h-5" />
             </button>
             <button className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors relative">
-              <ShoppingCart className="w-5 h-5" />
+              <Link
+                href="/cart"
+                className="p-2 bg-slate-100 rounded-full hover:bg-slate-200 block"
+              >
+                <ShoppingCart className="w-5 h-5" />
+              </Link>
+
               <span className="absolute top-0 right-0 w-4 h-4 bg-secondary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
                 2
               </span>
             </button>
             <div className="h-6 w-px bg-slate-300 mx-2"></div>
-            <Link href="/login" className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary-600 transition-colors">
+            <Link
+              href="/login"
+              className="flex items-center gap-2 text-sm font-medium text-slate-700 hover:text-primary-600 transition-colors"
+            >
               <div className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center border border-slate-200">
                 <User className="w-4 h-4" />
               </div>
@@ -76,10 +91,16 @@ export function Navbar() {
             className="md:hidden border-t border-slate-200 bg-white"
           >
             <div className="px-4 pt-2 pb-4 space-y-1">
-              <Link href="/explore" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50">
+              <Link
+                href="/explore"
+                className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50"
+              >
                 Eksplor
               </Link>
-              <Link href="/organizations" className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50">
+              <Link
+                href="/organizations"
+                className="block px-3 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-primary-50"
+              >
                 Organisasi
               </Link>
             </div>

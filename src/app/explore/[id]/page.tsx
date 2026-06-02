@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ShoppingBag,
@@ -7,11 +8,29 @@ import {
   Package,
   CreditCard,
   ChevronRight,
+  CheckCircle,
 } from "lucide-react";
 import { useState } from "react";
 
 export default function ProductDetail() {
+  const router = useRouter();
   const [quantity, setQuantity] = useState(1);
+  const [showNotification, setShowNotification] = useState(false);
+
+  // Fungsi saat tombol Keranjang diklik
+  const handleAddToCart = () => {
+    setShowNotification(true);
+    // Notifikasi akan hilang otomatis setelah 3 detik (3000 ms)
+    setTimeout(() => {
+      setShowNotification(false);
+    }, 3000);
+  };
+
+  // Fungsi saat tombol Checkout diklik
+  const handleCheckout = () => {
+    // Arahkan pembeli langsung ke halaman keranjang
+    router.push("/cart");
+  };
 
   const dummyProduct = {
     name: "Paket Nasi Ayam Geprek Level 3",
@@ -48,7 +67,7 @@ export default function ProductDetail() {
         <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
             {/* KOLOM KIRI - Gambar */}
-            <div className="bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-8 flex items-center justify-center min-h-[300px] md:min-h-[420px]">
+            <div className="bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-8 md:pt-12 flex items-start justify-center min-h-[300px] md:min-h-[420px]">
               <div className="w-full max-w-[280px] aspect-square bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-3">
                 <ShoppingBag className="w-20 h-20 text-slate-300" />
                 <p className="text-xs text-slate-400">
@@ -64,15 +83,15 @@ export default function ProductDetail() {
                 <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full mb-3">
                   {dummyProduct.organizer}
                 </span>
-                <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-snug">
+                <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-snug mt-1">
                   {dummyProduct.name}
                 </h1>
-                <div className="flex items-center gap-2 mt-3">
+                <div className="flex items-center gap-2 mt-1">
                   <span className="text-3xl font-extrabold text-blue-600">
                     Rp {dummyProduct.price.toLocaleString("id-ID")}
                   </span>
                 </div>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="text-sm text-slate-500 mt-2 mb-2">
                   Stok tersisa:{" "}
                   <span className="font-semibold text-slate-700">
                     {dummyProduct.stock} item
@@ -85,12 +104,12 @@ export default function ProductDetail() {
                 <h3 className="text-sm font-bold text-slate-800 mb-2">
                   📋 Deskripsi Produk
                 </h3>
-                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-3">
+                <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-1">
                   {dummyProduct.description}
                 </p>
                 <div className="flex flex-wrap gap-2 text-xs">
-                  <div className="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-100">
-                    <span className="text-slate-500">Kategori: </span>
+                  <div className="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-100 mb-1">
+                    <span className="text-slate-500 ">Kategori: </span>
                     <span className="font-semibold text-slate-800">
                       {dummyProduct.category}
                     </span>
@@ -101,9 +120,9 @@ export default function ProductDetail() {
               <hr className="border-slate-100 mb-5" />
 
               {/* Form Pembelian */}
-              <div className="flex flex-col gap-4 flex-1">
+              <div className="flex flex-col gap-6 flex-1">
                 {/* Kuantitas */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <Package className="w-4 h-4 text-blue-500" />
                     Jumlah Pembelian
@@ -139,7 +158,7 @@ export default function ProductDetail() {
                 </div>
 
                 {/* Metode Pengambilan */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <MapPin className="w-4 h-4 text-blue-500" />
                     Metode Pengambilan
@@ -153,7 +172,7 @@ export default function ProductDetail() {
                 </div>
 
                 {/* Metode Pembayaran */}
-                <div className="flex flex-col gap-1.5">
+                <div className="flex flex-col gap-2">
                   <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
                     <CreditCard className="w-4 h-4 text-blue-500" />
                     Metode Pembayaran
@@ -188,11 +207,20 @@ export default function ProductDetail() {
                 <div className="flex justify-end gap-3 mt-4">
                   <button
                     type="button"
+                    onClick={handleAddToCart}
                     className="flex-1 md:flex-none md:w-40 bg-emerald-600 text-black font-bold py-2.5 px-4 rounded-xl hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm shadow-sm"
                   >
                     <ShoppingBag className="w-4 h-4" />
                     Keranjang
                   </button>
+
+                  {/* <button
+                    type="button"
+                    onClick={handleCheckout} // <--- Panggil fungsi Checkout
+                    className="flex-1 md:flex-none md:w-40 bg-blue-600 text-white font-bold py-2.5 px-4 rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm text-sm"
+                  >
+                    Checkout
+                  </button> */}
                 </div>
 
                 {/* =====  INFO LOKASI  ===== */}
@@ -234,6 +262,15 @@ export default function ProductDetail() {
           </div>
         </div>
       </div>
+      {/* ===== NOTIFIKASI TOAST ===== */}
+      {showNotification && (
+        <div className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3">
+          <CheckCircle className="w-5 h-5 text-emerald-400" />
+          <span className="font-semibold text-sm">
+            Produk berhasil ditambahkan ke keranjang!
+          </span>
+        </div>
+      )}
     </div>
   );
 }
