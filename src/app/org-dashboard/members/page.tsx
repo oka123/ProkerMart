@@ -115,7 +115,7 @@ export default function MembersPage() {
                     required
                     value={newMember.name}
                     onChange={(e) => setNewMember({...newMember, name: e.target.value})}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all" 
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all" 
                     placeholder="Contoh: Budi Santoso"
                   />
                 </div>
@@ -124,7 +124,7 @@ export default function MembersPage() {
                   <select 
                     value={newMember.role}
                     onChange={(e) => setNewMember({...newMember, role: e.target.value})}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
                   >
                     {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
                   </select>
@@ -134,7 +134,7 @@ export default function MembersPage() {
                   <select 
                     value={newMember.scope}
                     onChange={(e) => setNewMember({...newMember, scope: e.target.value})}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
                   >
                     {SCOPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
