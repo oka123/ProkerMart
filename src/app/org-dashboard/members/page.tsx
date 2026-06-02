@@ -134,7 +134,7 @@ export default function MembersPage() {
                   <select 
                     value={newMember.scope}
                     onChange={(e) => setNewMember({...newMember, scope: e.target.value})}
-                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-900 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
+                    className="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm text-slate-800 focus:ring-2 focus:ring-slate-900 focus:border-slate-900 outline-none transition-all bg-white"
                   >
                     {SCOPES.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
                   </select>
