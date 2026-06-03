@@ -96,7 +96,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               href="/explore"
               className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
             >
-              Produk
+              Eksplor
             </Link>
             <Link
               href="/organizations"

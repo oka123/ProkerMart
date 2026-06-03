@@ -151,7 +151,9 @@ export default function ExplorePage() {
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
         <div className="mb-6 flex justify-between items-end">
           <div>
-            <h1 className="text-2xl font-bold text-slate-900">Produk</h1>
+            <h1 className="text-2xl font-bold text-slate-900">
+              Eksplor Produk
+            </h1>
             <p className="text-slate-500">
               Menampilkan {filteredProducts.length} produk dari berbagai proker.
             </p>
@@ -167,50 +169,53 @@ export default function ExplorePage() {
         {filteredProducts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-6">
             {filteredProducts.map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.3, delay: i * 0.05 }}
-                className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl hover:shadow-slate-200/50 transition-all group flex flex-col"
-              >
-                {/* Product Image Placeholder */}
-                <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
-                  <ShoppingBag className="w-12 h-12 text-slate-300 group-hover:scale-110 transition-transform duration-500" />
-                  <div className="absolute top-3 left-3 flex flex-col gap-1">
-                    <span
-                      className={`px-2 py-1 rounded-md text-xs font-bold w-fit ${product.tagColor}`}
-                    >
-                      {product.tag}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Product Details */}
-                <div className="p-4 flex flex-col flex-1">
-                  <p className="text-xs font-semibold text-primary-600 mb-1 flex items-center gap-1 line-clamp-1">
-                    <MapPin className="w-3 h-3" />
-                    {product.orgName} - {product.prokerName}
-                  </p>
-                  <h3 className="font-bold text-slate-900 mb-1 group-hover:text-primary-600 transition-colors line-clamp-2">
-                    {product.name}
-                  </h3>
-
-                  <div className="mt-auto pt-4">
-                    <p className="text-xs text-slate-500 mb-1">
-                      Stok: {product.stock}
-                    </p>
-                    <div className="flex items-center justify-between">
-                      <span className="font-extrabold text-primary-600 text-lg">
-                        Rp {product.price.toLocaleString("id-ID")}
+              <Link href={`/explore/${product.id}`} key={product.id}>
+                <motion.div
+                  /* key={product.id} --> Ini sudah kita hapus dan pindahkan ke atas */
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.3, delay: i * 0.05 }}
+                  className="bg-white rounded-2xl overflow-hidden border border-slate-200 hover:shadow-xl hover:shadow-slate-200/50 transition-all group flex flex-col h-full"
+                >
+                  {/* Product Image Placeholder */}
+                  <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
+                    <ShoppingBag className="w-12 h-12 text-slate-300 group-hover:scale-110 transition-transform duration-500" />
+                    <div className="absolute top-3 left-3 flex flex-col gap-1">
+                      <span
+                        className={`px-2 py-1 rounded-md text-xs font-bold w-fit ${product.tagColor}`}
+                      >
+                        {product.tag}
                       </span>
-                      <button className="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-colors">
-                        +
-                      </button>
                     </div>
                   </div>
-                </div>
-              </motion.div>
+
+                  {/* Product Details */}
+                  <div className="p-4 flex flex-col flex-1">
+                    <p className="text-xs font-semibold text-primary-600 mb-1 flex items-center gap-1 line-clamp-1">
+                      <MapPin className="w-3 h-3" />
+                      {product.orgName} - {product.prokerName}
+                    </p>
+                    <h3 className="font-bold text-slate-900 mb-1 group-hover:text-primary-600 transition-colors line-clamp-2">
+                      {product.name}
+                    </h3>
+
+                    <div className="mt-auto pt-4">
+                      <p className="text-xs text-slate-500 mb-1">
+                        Stok: {product.stock}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-primary-600 text-lg">
+                          Rp {product.price.toLocaleString("id-ID")}
+                        </span>
+                        {/* Catatan: Karena sekarang dibungkus Link, jika tombol + ini diklik, pengunjung juga akan ikut masuk ke halaman detail. Kita bisa atur ini nanti! */}
+                        <button className="w-9 h-9 rounded-full bg-primary-50 text-primary-600 flex items-center justify-center hover:bg-primary-600 hover:text-white transition-colors">
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              </Link>
             ))}
           </div>
         ) : (
