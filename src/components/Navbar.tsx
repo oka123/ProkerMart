@@ -1,13 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  ShoppingCart,
-  Search,
-  User,
-  Menu,
-  MessageSquare,
-} from "lucide-react";
+import { ShoppingCart, Search, User, Menu, MessageSquare } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
@@ -128,14 +122,6 @@ export function Navbar({ variant = "default" }: NavbarProps) {
             </Link>
             <div className="h-6 w-px bg-slate-300 mx-2"></div>
 
-            {/* Direct Login Link */}
-            <Link
-              href="/login"
-              className="text-sm font-medium text-slate-700 hover:text-primary-600 transition-colors"
-            >
-              Masuk
-            </Link>
-
             {/* Profile Dropdown */}
             <div
               ref={userMenuRef}
@@ -187,6 +173,14 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                 )}
               </AnimatePresence> */}
             </div>
+
+            {/* Direct Login Link */}
+            <Link
+              href="/login"
+              className="text-sm font-medium text-slate-700 hover:text-primary-600 transition-colors"
+            >
+              Masuk
+            </Link>
           </div>
 
           {/* Mobile Actions */}
@@ -201,7 +195,9 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               </span>
             </Link>
             <button
-              onClick={() => window.dispatchEvent(new CustomEvent("openProkerChat"))}
+              onClick={() =>
+                window.dispatchEvent(new CustomEvent("openProkerChat"))
+              }
               className="p-2 text-slate-500 active:text-primary-600 relative"
             >
               <MessageSquare className="w-6 h-6" />

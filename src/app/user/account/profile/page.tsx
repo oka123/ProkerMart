@@ -131,7 +131,7 @@ export default function ProfilePage() {
                       </label>
                       <div className="flex-1 flex items-center justify-between lg:justify-start gap-4 min-w-0 overflow-x-auto no-scrollbar">
                         <div className="flex gap-4">
-                          {["Laki-laki", "Perempuan", "Lainnya"].map((g) => (
+                          {["Laki-laki", "Perempuan"].map((g) => (
                             <label
                               key={g}
                               className="hidden lg:flex items-center gap-2 cursor-pointer whitespace-nowrap"
