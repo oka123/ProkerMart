@@ -2,13 +2,41 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Edit2, Trash2, PackageSearch, Tag, Image as ImageIcon } from "lucide-react";
+import {
+  Plus,
+  Edit2,
+  Trash2,
+  PackageSearch,
+  Tag,
+  Image as ImageIcon,
+} from "lucide-react";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState([
-    { id: "P001", name: "Paket Nasi Ayam Geprek Level 3", price: 15000, stock: 50, category: "Makanan", status: "Aktif" },
-    { id: "P002", name: "Es Teh Manis Jumbo", price: 5000, stock: 100, category: "Minuman", status: "Aktif" },
-    { id: "P003", name: "Kaos Panitia Dies Natalis (L)", price: 85000, stock: 0, category: "Pakaian", status: "Habis" },
+    {
+      id: "P001",
+      name: "Paket Nasi Ayam Geprek Level 3",
+      price: 15000,
+      stock: 50,
+      category: "Makanan",
+      status: "Aktif",
+    },
+    {
+      id: "P002",
+      name: "Es Teh Manis Jumbo",
+      price: 5000,
+      stock: 100,
+      category: "Minuman",
+      status: "Aktif",
+    },
+    {
+      id: "P003",
+      name: "Kaos Panitia Dies Natalis (L)",
+      price: 85000,
+      stock: 0,
+      category: "Pakaian",
+      status: "Habis",
+    },
   ]);
 
   return (
@@ -16,7 +44,9 @@ export default function ProductsPage() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Katalog Produk</h1>
-          <p className="text-sm text-slate-500">Kelola daftar produk, stok, dan harga untuk etalase proker Anda.</p>
+          <p className="text-sm text-slate-500">
+            Kelola daftar produk, stok, dan harga untuk etalase proker Anda.
+          </p>
         </div>
         <button className="bg-primary-600 hover:bg-primary-700 text-white px-4 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2">
           <Plus className="w-4 h-4" />
@@ -28,7 +58,11 @@ export default function ProductsPage() {
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex gap-4">
           <div className="relative flex-1">
             <PackageSearch className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-            <input type="text" placeholder="Cari nama produk..." className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none" />
+            <input
+              type="text"
+              placeholder="Cari nama produk..."
+              className="w-full pl-10 pr-4 py-2 rounded-lg border border-slate-200 text-sm focus:ring-2 focus:ring-primary-500 outline-none"
+            />
           </div>
           <select className="border border-slate-200 rounded-lg px-3 py-2 text-sm outline-none">
             <option>Semua Kategori</option>
@@ -49,7 +83,7 @@ export default function ProductsPage() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {products.map((product, i) => (
-              <motion.tr 
+              <motion.tr
                 key={product.id}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -69,16 +103,24 @@ export default function ProductsPage() {
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 font-semibold text-slate-900">Rp {product.price.toLocaleString('id-ID')}</td>
+                <td className="px-6 py-4 font-semibold text-slate-900">
+                  Rp {product.price.toLocaleString("id-ID")}
+                </td>
                 <td className="px-6 py-4">
-                  <span className={`font-semibold ${product.stock > 0 ? 'text-slate-700' : 'text-red-600'}`}>
+                  <span
+                    className={`font-semibold ${product.stock > 0 ? "text-slate-700" : "text-red-600"}`}
+                  >
                     {product.stock} pcs
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <span className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
-                    product.status === 'Aktif' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'
-                  }`}>
+                  <span
+                    className={`inline-flex items-center px-2.5 py-1 rounded-md text-xs font-semibold ${
+                      product.status === "Aktif"
+                        ? "bg-emerald-100 text-emerald-700"
+                        : "bg-red-100 text-red-700"
+                    }`}
+                  >
                     {product.status}
                   </span>
                 </td>
