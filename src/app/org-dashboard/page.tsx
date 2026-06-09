@@ -200,7 +200,8 @@ export default function OrgDashboardPage() {
                   Verifikasi Akun Proker
                 </h3>
                 <p className="text-xs text-slate-500 mb-3">
-                  Panitia &quot;Seminar Nasional&quot; meminta akses ke platform.
+                  Panitia &quot;Seminar Nasional&quot; meminta akses ke
+                  platform.
                 </p>
                 <div className="flex gap-2">
                   <button className="px-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg">
