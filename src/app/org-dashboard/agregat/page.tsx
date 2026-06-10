@@ -48,9 +48,9 @@ export default function ReportsPage() {
     return {
       revenue: Math.round(baseRevenue * multiplier * prokerShare),
       orders: Math.round(baseOrders * multiplier * prokerShare),
-      aov: baseAOV + (Math.random() * 5000), // Average Order Value
+      aov: baseAOV + 2500, // Average Order Value
       growth: selectedTime === "year" ? "+45%" : selectedTime === "week" ? "+5%" : "+12%",
-      chartData: Array.from({ length: 7 }).map(() => Math.floor(Math.random() * 100) + 20)
+      chartData: Array.from({ length: 7 }).map((_, i) => Math.floor(20 + (i * 37) % 80))
     };
   }, [selectedProker, selectedTime]);
 
