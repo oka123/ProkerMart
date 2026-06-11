@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(request: NextRequest) {
@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const userLng = parseFloat(lngParam);
 
   try {
-    const supabase = await createClient();
+    const supabase = createAdminClient();
 
     // 1. Dapatkan daftar id_sub_toko dan jaraknya menggunakan RPC
     const { data: nearbyData, error: rpcError } = await supabase.rpc(
@@ -53,10 +53,24 @@ export async function GET(request: NextRequest) {
         latitude,
         longitude,
         toko (
-          nama_toko
+          id_toko,
+          nama_toko,
+          latitude,
+          longitude
+        ),
+        sub_toko_member (
+          id_pengguna,
+          latitude,
+          longitude,
+          pengguna (
+            nama
+          )
         ),
         produk (
           kategori
+        ),
+        ulasan (
+          rating
         )
       `)
       .in("id_sub_toko", ids);
@@ -90,7 +104,8 @@ export async function GET(request: NextRequest) {
         ).join(", ");
 
         // Gabungkan nama toko dan proker
-        const namaToko = shop.toko?.nama_toko || "Toko";
+        const tokoData = Array.isArray(shop.toko) ? shop.toko[0] : shop.toko;
+        const namaToko = tokoData?.nama_toko || "Toko";
         const fullName = `${namaToko} - ${shop.nama_proker}`;
 
         // Jika pencarian text dipakai, bisa di-filter lagi di JS agar lebih akurat mencari nama_toko juga
@@ -101,18 +116,40 @@ export async function GET(request: NextRequest) {
           return null; // Akan dibuang di tahap filter
         }
 
+        const members = shop.sub_toko_member || [];
+        const panitiaList = members.map((m: any) => {
+          const penggunaObj = Array.isArray(m.pengguna) ? m.pengguna[0] : m.pengguna;
+          return {
+            id: m.id_pengguna,
+            name: penggunaObj?.nama || "Panitia",
+            lat: m.latitude,
+            lng: m.longitude
+          };
+        }).filter((m: any) => m.lat && m.lng);
+
+        // Hitung rating berdasarkan data ulasan
+        const ulasanList = shop.ulasan || [];
+        const reviewCount = ulasanList.length;
+        const rating = reviewCount > 0
+          ? ulasanList.reduce((sum: number, u: any) => sum + u.rating, 0) / reviewCount
+          : 0;
+
         return {
           id: shop.id_sub_toko,
           name: fullName,
+          tokoName: namaToko,
+          tokoId: tokoData?.id_toko,
           categories: categories || "Lainnya",
-          rating: 4.5 + Math.random() * 0.5, // Dummy rating untuk sementara karena belum ada tabel review
-          reviewCount: Math.floor(Math.random() * 200) + 10,
+          rating: Number(rating.toFixed(1)),
+          reviewCount: reviewCount,
           distanceKm: parseFloat(distanceKm.toFixed(1)),
           travelTimeMin: Math.round(distanceKm * 15) || 5, // Estimasi 15 menit per km
           imageUrl: shop.foto_sampul || "/placeholder.jpg",
           lat: shop.latitude,
           lng: shop.longitude,
-          promoTag: Math.random() > 0.7 ? "Terlaris" : undefined, // Dummy promo
+          tokoCoords: tokoData?.latitude && tokoData?.longitude ? { lat: tokoData.latitude, lng: tokoData.longitude } : null,
+          panitiaList: panitiaList,
+          promoTag: undefined, // Dihapus karena menggunakan dummy
         };
       })
       .filter(Boolean)

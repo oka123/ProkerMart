@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Eye,
   EyeOff,
@@ -8,13 +8,32 @@ import {
   Lock,
   CheckCircle2,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
 
 export default function ChangePasswordPage() {
+  const router = useRouter();
+  const supabase = createClient();
+  const [userEmail, setUserEmail] = useState<string>("");
+
+  useEffect(() => {
+    async function init() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+      setUserEmail(user.email || "");
+    }
+    init();
+  }, [router, supabase]);
+
   const [formData, setFormData] = useState({
     currentPassword: "",
     newPassword: "",
@@ -36,31 +55,56 @@ export default function ChangePasswordPage() {
     setShowPasswords((prev) => ({ ...prev, [field]: !prev[field] }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus("loading");
+    setErrorMessage("");
 
-    // Simulate API Call
-    setTimeout(() => {
+    try {
       if (formData.newPassword !== formData.confirmPassword) {
-        setStatus("error");
-        setErrorMessage("Konfirmasi password baru tidak cocok.");
-        return;
+        throw new Error("Konfirmasi password baru tidak cocok.");
       }
       if (formData.newPassword.length < 8) {
-        setStatus("error");
-        setErrorMessage("Password baru harus minimal 8 karakter.");
-        return;
+        throw new Error("Password baru harus minimal 8 karakter.");
       }
 
+      // Step 1: Verify current password by signing in
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email: userEmail,
+        password: formData.currentPassword,
+      });
+
+      if (signInError) {
+        throw new Error("Password saat ini salah.");
+      }
+
+      // Step 2: Update to new password
+      const { error: updateError } = await supabase.auth.updateUser({
+        password: formData.newPassword,
+      });
+
+      if (updateError) {
+        throw updateError;
+      }
+
+      // Also update password field in `pengguna` table
+      // (Optional but good since we maintain a manual sync of password in initial_schema)
+      await supabase
+        .from("pengguna")
+        .update({ password: formData.newPassword }) // Just for mock/sync purpose based on ERD
+        .eq("email", userEmail);
+
       setStatus("success");
-      // Reset form after success
       setFormData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
-    }, 1500);
+    } catch (error: any) {
+      console.error(error);
+      setStatus("error");
+      setErrorMessage(error.message || "Gagal mengubah password.");
+    }
   };
 
   return (
@@ -71,23 +115,18 @@ export default function ChangePasswordPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
         <div className="lg:flex lg:gap-6">
-          {/* Desktop Sidebar */}
           <aside className="hidden lg:block shrink-0">
             <UserSidebar />
           </aside>
 
-          {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-            {/* Mobile Header */}
             <MobileHeader
               title="Ubah Password"
               backHref="/user/account/profile"
               rightActions={[]}
             />
 
-            {/* Content Container */}
             <div className="bg-white lg:rounded-sm lg:shadow-sm min-h-125">
-              {/* Desktop Header */}
               <div className="hidden lg:block p-6 border-b border-slate-100">
                 <h2 className="text-lg font-medium text-slate-900">
                   Ubah Password
@@ -128,9 +167,8 @@ export default function ChangePasswordPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       onSubmit={handleSubmit}
-                      className="space-y-6"
+                      className="space-y-6 max-w-xl"
                     >
-                      {/* Current Password */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                           <Lock className="w-4 h-4 text-slate-400" />
@@ -164,7 +202,6 @@ export default function ChangePasswordPage() {
                         </div>
                       </div>
 
-                      {/* New Password */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                           <ShieldCheck className="w-4 h-4 text-slate-400" />
@@ -202,7 +239,6 @@ export default function ChangePasswordPage() {
                         </p>
                       </div>
 
-                      {/* Confirm Password */}
                       <div className="space-y-2">
                         <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-slate-400" />
@@ -236,7 +272,6 @@ export default function ChangePasswordPage() {
                         </div>
                       </div>
 
-                      {/* Error Message */}
                       {status === "error" && (
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
@@ -248,7 +283,6 @@ export default function ChangePasswordPage() {
                         </motion.div>
                       )}
 
-                      {/* Submit Button */}
                       <div className="pt-4">
                         <button
                           type="submit"
@@ -261,18 +295,12 @@ export default function ChangePasswordPage() {
                         >
                           {status === "loading" ? (
                             <>
-                              <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                              <Loader2 className="w-4 h-4 animate-spin" />
                               <span>Memproses...</span>
                             </>
                           ) : (
                             "Konfirmasi"
                           )}
-                        </button>
-                        <button
-                          type="button"
-                          className="w-full lg:w-auto mt-3 py-3 text-slate-500 text-sm font-medium hover:bg-slate-50 transition-all"
-                        >
-                          Lupa Password?
                         </button>
                       </div>
                     </motion.form>

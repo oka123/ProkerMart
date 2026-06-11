@@ -22,14 +22,18 @@ export const PRICE_PRESETS = [
   { value: "all", label: "Semua Harga", min: undefined, max: undefined },
   { value: "<15k", label: "Di bawah Rp 15.000", min: undefined, max: 15000 },
   { value: "15k-50k", label: "Rp 15.000 – Rp 50.000", min: 15000, max: 50000 },
-  { value: "50k-100k", label: "Rp 50.000 – Rp 100.000", min: 50000, max: 100000 },
+  {
+    value: "50k-100k",
+    label: "Rp 50.000 – Rp 100.000",
+    min: 50000,
+    max: 100000,
+  },
   { value: ">100k", label: "Di atas Rp 100.000", min: 100000, max: undefined },
 ];
 
 const METODE_OPTIONS = [
   { value: "pickup", label: "🏪 Pickup" },
-  { value: "keliling", label: "🚶 Keliling" },
-  { value: "pre-order", label: "📋 Pre-order" },
+  { value: "delivery", label: "🚚 Delivery" },
 ];
 
 // ─── Count active filters (for badge) ────────────────────────────────────────
@@ -59,7 +63,15 @@ export function FilterModal({
 
   // Sync state when modal opens
   useEffect(() => {
-    if (isOpen) setValues(initialValues);
+    if (isOpen) {
+      setValues(initialValues);
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "auto";
+    }
+    return () => {
+      document.body.style.overflow = "auto";
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -101,7 +113,7 @@ export function FilterModal({
             transition={{ type: "spring", damping: 30, stiffness: 350 }}
             className="fixed bottom-0 left-0 right-0 md:inset-auto md:top-1/2 md:left-1/2 md:-translate-x-1/2 md:-translate-y-1/2
                        bg-white rounded-t-3xl md:rounded-2xl shadow-2xl z-50
-                       w-full md:w-120-h-[85vh] flex flex-col"
+                       w-full md:w-120 max-h-[85vh] flex flex-col"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0">
@@ -125,7 +137,7 @@ export function FilterModal({
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-auto px-6 py-5 space-y-7">
+            <div className="flex-1 overflow-y-scroll px-6 py-5 space-y-7">
               {/* Price Range */}
               <section>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
@@ -147,7 +159,10 @@ export function FilterModal({
                         value={preset.value}
                         checked={values.pricePreset === preset.value}
                         onChange={() =>
-                          setValues((v) => ({ ...v, pricePreset: preset.value }))
+                          setValues((v) => ({
+                            ...v,
+                            pricePreset: preset.value,
+                          }))
                         }
                         className="accent-primary-600"
                       />
@@ -209,14 +224,19 @@ export function FilterModal({
                     type="checkbox"
                     checked={values.inStockOnly}
                     onChange={(e) =>
-                      setValues((v) => ({ ...v, inStockOnly: e.target.checked }))
+                      setValues((v) => ({
+                        ...v,
+                        inStockOnly: e.target.checked,
+                      }))
                     }
                     className="w-4 h-4 rounded accent-primary-600"
                   />
                   <div>
                     <p
                       className={`text-sm font-medium ${
-                        values.inStockOnly ? "text-primary-700" : "text-slate-700"
+                        values.inStockOnly
+                          ? "text-primary-700"
+                          : "text-slate-700"
                       }`}
                     >
                       Hanya tampilkan yang tersedia

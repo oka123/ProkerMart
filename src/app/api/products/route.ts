@@ -2,9 +2,9 @@ import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
 
 const PRODUCT_SELECT = `
-  id_produk, nama_produk, deskripsi, harga, stok, foto, kategori, status_aktif, tgl_dibuat,
+  id_produk, nama_produk, deskripsi, harga, stok, foto, kategori, status_aktif, tgl_dibuat, metode_jualan, preorder,
   sub_toko (
-    id_sub_toko, nama_proker, metode_jualan, jadwal_operasional,
+    id_sub_toko, nama_proker, jadwal_operasional,
     toko (
       id_toko, nama_toko,
       organisasi ( id_organisasi, nama_organisasi )
@@ -63,40 +63,18 @@ export async function GET(request: NextRequest) {
     // ── In-stock only ────────────────────────────────────────────────────────
     if (inStockOnly) query = query.gt("stok", 0);
 
-    // ── Metode jualan filter (two-step: get sub_toko IDs first) ─────────────
+    // ── Metode jualan filter ────────────────────────────────────────────────
     if (metodeParam.trim()) {
       const metodeList = metodeParam.split(",").map((m) => m.trim()).filter(Boolean);
 
       if (metodeList.length > 0) {
-        let subTokoQuery = supabase.from("sub_toko").select("id_sub_toko");
-
         if (metodeList.length === 1) {
-          subTokoQuery = subTokoQuery.ilike(
-            "metode_jualan",
-            `%${metodeList[0]}%`
-          );
+          query = query.ilike("metode_jualan", `%${metodeList[0]}%`);
         } else {
           const orClauses = metodeList
             .map((m) => `metode_jualan.ilike.%${m}%`)
             .join(",");
-          subTokoQuery = subTokoQuery.or(orClauses);
-        }
-
-        const { data: subTokoData, error: stErr } = await subTokoQuery;
-
-        if (stErr) {
-          console.error("[API - Products] Sub-toko filter error:", stErr);
-        } else if (subTokoData && subTokoData.length > 0) {
-          const ids = subTokoData.map((s) => s.id_sub_toko);
-          query = query.in("id_sub_toko", ids);
-        } else {
-          // No sub_toko matches → return empty result immediately
-          return NextResponse.json({
-            products: [],
-            hasMore: false,
-            total: 0,
-            page,
-          });
+          query = query.or(orClauses);
         }
       }
     }

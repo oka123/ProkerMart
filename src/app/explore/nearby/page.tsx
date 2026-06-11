@@ -6,6 +6,8 @@ import { motion, PanInfo } from "framer-motion";
 import { Search, ArrowLeft, Navigation, ShoppingCart, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { NearbyShopCard } from "@/components/NearbyShopCard";
+import type { MarkerData } from "@/components/MapArea";
+import React from "react";
 
 // Dynamic import for MapArea to prevent SSR issues with Leaflet
 const MapArea = dynamic(() => import("@/components/MapArea"), {
@@ -35,8 +37,11 @@ interface Shop {
   promoTag?: string;
   lat: number;
   lng: number;
+  tokoId?: string;
+  tokoName?: string;
+  tokoCoords?: { lat: number; lng: number } | null;
+  panitiaList?: Array<{ id: string; name: string; lat: number; lng: number }>;
 }
-
 export default function NearbyShopsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
@@ -50,6 +55,51 @@ export default function NearbyShopsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [isGettingLocation, setIsGettingLocation] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
+
+  const mapMarkers = React.useMemo(() => {
+    const arr: MarkerData[] = [];
+    arr.push({
+      id: "user-loc",
+      title: "Lokasi Anda",
+      lat: userLocation.lat,
+      lng: userLocation.lng,
+      type: "pembeli"
+    });
+
+    shops.forEach(shop => {
+      arr.push({
+        id: shop.id,
+        title: `Proker: ${shop.name}`,
+        lat: shop.lat,
+        lng: shop.lng,
+        type: "subtoko"
+      });
+
+      if (shop.tokoCoords) {
+        arr.push({
+          id: `toko-${shop.id}`,
+          title: `Toko: ${shop.tokoName || "Toko Utama"}`,
+          lat: shop.tokoCoords.lat,
+          lng: shop.tokoCoords.lng,
+          type: "toko"
+        });
+      }
+
+      if (shop.panitiaList) {
+        shop.panitiaList.forEach(p => {
+          arr.push({
+            id: `panitia-${p.id}`,
+            title: `Panitia: ${p.name}`,
+            lat: p.lat,
+            lng: p.lng,
+            type: "panitia"
+          });
+        });
+      }
+    });
+
+    return arr;
+  }, [shops, userLocation]);
 
   // Debounce search input
   const handleSearchChange = (value: string) => {
@@ -175,8 +225,13 @@ export default function NearbyShopsPage() {
         >
           <MapArea
             userLocation={userLocation}
-            shops={shops}
-            onMarkerClick={(id) => setActiveShopId(id)}
+            markers={mapMarkers}
+            onMarkerClick={(id) => {
+              // Only select if it is a shop id (not toko-xxx or panitia-xxx or user-loc)
+              if (shops.some(s => s.id === id)) {
+                setActiveShopId(id);
+              }
+            }}
             activeShopId={activeShopId}
           />
 
@@ -229,7 +284,10 @@ export default function NearbyShopsPage() {
                 />
 
                 <div className="flex flex-col gap-2 mt-2">
-                  <Link href={`/explore/${activeShopId}`} className="w-full">
+                  <Link 
+                    href={`/organizations/${shops.find((s) => s.id === activeShopId)?.tokoId}/${activeShopId}`} 
+                    className="w-full"
+                  >
                     <button className="w-full bg-primary-600 text-white font-medium py-3 px-4 rounded-xl shadow-sm flex justify-center items-center hover:bg-primary-700 transition-colors gap-2">
                       Lihat Penjual <ArrowLeft className="w-4 h-4 rotate-180" />
                     </button>

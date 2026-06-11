@@ -1,6 +1,5 @@
 "use client";
 
-import React from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -23,6 +22,7 @@ interface MobileHeaderProps {
 export function MobileHeader({
   title,
   showBack = true,
+  backHref = "/",
   rightActions = ["cart", "chat"],
   cartCount = 0,
   chatCount = 0,
@@ -34,7 +34,7 @@ export function MobileHeader({
     >
       <div className="flex items-center gap-3">
         {showBack && (
-          <Link href="/">
+          <Link href={backHref}>
             <ArrowLeft className="w-6 h-6 text-primary-600" />
           </Link>
         )}

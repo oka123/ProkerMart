@@ -14,6 +14,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 import { MobileHeader } from "./MobileHeader";
 import { createClient } from "@/lib/supabase/client";
+import { getCartItems } from "@/lib/supabase/queries/cart";
+
+
 
 interface NavbarProps {
   variant?: "default" | "cart";
@@ -26,19 +29,21 @@ export function Navbar({ variant = "default" }: NavbarProps) {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const [cartCount, setCartCount] = useState(0);
 
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(event.target as Node)
-      ) {
-        setIsUserMenuOpen(false);
+    const fetchCartCount = async () => {
+      try {
+        const items = await getCartItems();
+        // Menjumlahkan berdasarkan properti 'jumlah'
+        const total = items.reduce((sum, item) => sum + item.jumlah, 0);
+        setCartCount(total);
+      } catch (error) {
+        console.error("Gagal mengambil jumlah keranjang:", error);
       }
     };
 
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    fetchCartCount();
   }, []);
 
   useEffect(() => {
@@ -109,11 +114,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
 
   return (
     <nav
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        isScrolled
-          ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
-          : "bg-white border-b border-slate-200 shadow-sm"
-      }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled
+        ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
+        : "bg-white border-b border-slate-200 shadow-sm"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -152,9 +156,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                     className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors relative"
                   >
                     <ShoppingCart className="w-5 h-5" />
-                    <span className="absolute top-0 right-0 w-4 h-4 bg-secondary-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
-                      2
-                    </span>
+                    {cartCount > 0 && (
+                      <span className="absolute top-0 right-0 w-4 h-4 bg-fuchsia-500 text-white text-[10px] font-bold flex items-center justify-center rounded-full">
+                        {cartCount}
+                      </span>
+                    )}
                   </Link>
 
                   {/* Profile / Auth State */}

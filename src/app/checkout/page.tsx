@@ -26,13 +26,13 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState<"pickup" | "delivery" | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<"qris" | "transfer" | "cod" | null>(null);
   const [hasSavedAddress, setHasSavedAddress] = useState(false); // Toggle ini untuk mensimulasikan sudah ada alamat/belum
-  
+
   // Pick Up States
   const [pickupTime, setPickupTime] = useState("");
   const [newAddressDetail, setNewAddressDetail] = useState("");
   const [showPaymentAlert, setShowPaymentAlert] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
-  
+
   // States for Notifications/Modals
   const [showToast, setShowToast] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -41,6 +41,8 @@ export default function CheckoutPage() {
   const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID" | "EXPIRED">("PENDING");
   const [timeLeft, setTimeLeft] = useState(300);
   const [isCheckingManual, setIsCheckingManual] = useState(false);
+
+  const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
 
   // Logic Hooks
   useEffect(() => {
@@ -95,13 +97,22 @@ export default function CheckoutPage() {
   };
 
   // Dummy Product Data
-  const dummyProduct = {
-    name: "Paket Nasi Ayam Geprek Level 3",
-    organizer: "HIMAIF - Dies Natalis",
-    price: 15000,
-    quantity: 1,
-    imagePlaceholder: true
-  };
+  useEffect(() => {
+    const savedItems = localStorage.getItem('checkoutItems');
+    if (savedItems) {
+      // Ubah teks JSON kembali menjadi bentuk Array/Object
+      setCheckoutItems(JSON.parse(savedItems));
+    } else {
+      // (Opsional) Jika tidak ada data, kembalikan user ke keranjang
+      // router.push('/cart');
+    }
+  }, []);
+
+  // Menghitung subtotal dari seluruh barang yang ada di checkoutItems
+  const subtotal = checkoutItems.reduce((acc, item) => acc + (Number(item.produk.harga) * item.jumlah), 0);
+  const platformFee = 2000;
+  const grandTotal = subtotal > 0 ? subtotal + platformFee : 0;
+
 
   const handleCurrentLocation = () => {
     setIsDetectingLocation(true);
@@ -134,7 +145,7 @@ export default function CheckoutPage() {
       setTimeLeft(300);
       setIsCheckingManual(false);
       setShowPaymentModal(true);
-      
+
       // Simulasi loading 1.5 detik, lalu munculkan QRIS/VA
       setTimeout(() => {
         setPaymentGatewayState(paymentMethod === "qris" ? "qris" : "transfer");
@@ -165,16 +176,15 @@ export default function CheckoutPage() {
               <MapPin className="w-5 h-5 text-blue-600" />
               Metode Pengambilan
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
               {/* Card Select: Pick Up */}
-              <div 
+              <div
                 onClick={() => setDeliveryMethod("pickup")}
-                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                  deliveryMethod === "pickup" 
-                    ? "border-blue-600 bg-blue-50" 
-                    : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${deliveryMethod === "pickup"
+                  ? "border-blue-600 bg-blue-50"
+                  : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className={`p-2 rounded-full ${deliveryMethod === "pickup" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
@@ -188,13 +198,12 @@ export default function CheckoutPage() {
               </div>
 
               {/* Card Select: Delivery */}
-              <div 
+              <div
                 onClick={() => setDeliveryMethod("delivery")}
-                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${
-                  deliveryMethod === "delivery" 
-                    ? "border-blue-600 bg-blue-50" 
-                    : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border-2 p-4 transition-all ${deliveryMethod === "delivery"
+                  ? "border-blue-600 bg-blue-50"
+                  : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <div className="flex items-center gap-3 mb-2">
                   <div className={`p-2 rounded-full ${deliveryMethod === "delivery" ? "bg-blue-600 text-white" : "bg-slate-100 text-slate-500"}`}>
@@ -217,7 +226,7 @@ export default function CheckoutPage() {
                 </div>
                 <div>
                   <h4 className="text-sm font-semibold text-slate-700 mb-2">Pilih Jam Pengambilan</h4>
-                  <select 
+                  <select
                     className="w-full md:w-1/2 border border-slate-300 rounded-lg px-3 py-2.5 bg-white text-sm text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none"
                     value={pickupTime}
                     onChange={(e) => setPickupTime(e.target.value)}
@@ -240,7 +249,7 @@ export default function CheckoutPage() {
                   <div>
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="text-sm font-semibold text-slate-700">Alamat Pengiriman</h4>
-                      <button 
+                      <button
                         className="text-xs text-blue-600 font-semibold hover:underline"
                         onClick={() => setHasSavedAddress(false)}
                       >
@@ -256,7 +265,7 @@ export default function CheckoutPage() {
                   <div>
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="text-sm font-semibold text-slate-700">Tambah Alamat Baru</h4>
-                      <button 
+                      <button
                         className="text-xs text-blue-600 font-semibold hover:underline"
                         onClick={() => setHasSavedAddress(true)}
                       >
@@ -265,7 +274,7 @@ export default function CheckoutPage() {
                     </div>
                     <div className="space-y-3">
                       {/* Gunakan Lokasi Saat Ini Button */}
-                      <button 
+                      <button
                         onClick={handleCurrentLocation}
                         disabled={isDetectingLocation}
                         className="w-full flex items-center justify-center gap-2 bg-white border border-slate-300 rounded-lg px-4 py-2.5 text-sm font-semibold text-blue-600 hover:bg-slate-50 transition-colors disabled:opacity-70 disabled:cursor-not-allowed shadow-sm"
@@ -306,7 +315,7 @@ export default function CheckoutPage() {
                       <div className="w-full h-40 md:h-48 bg-slate-100 rounded-xl border border-slate-300 flex flex-col items-center justify-center text-slate-400 overflow-hidden relative">
                         <Map className="w-12 h-12 mb-2 opacity-50" />
                         <span className="text-xs font-medium px-4 text-center">Peta Google Maps akan dirender di sini</span>
-                        
+
                         {/* Dummy map elements for visuals */}
                         <div className="absolute top-2 right-2 flex flex-col gap-1">
                           <div className="w-6 h-6 bg-white rounded shadow flex items-center justify-center text-[10px] font-bold text-slate-500">+</div>
@@ -320,8 +329,8 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-slate-600 block mb-1">Detail Alamat Lengkap *</label>
-                        <textarea 
-                          placeholder="Nama jalan, nomor rumah/kamar, patokan..." 
+                        <textarea
+                          placeholder="Nama jalan, nomor rumah/kamar, patokan..."
                           className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none h-20"
                           value={newAddressDetail}
                           onChange={(e) => setNewAddressDetail(e.target.value)}
@@ -341,20 +350,50 @@ export default function CheckoutPage() {
           <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
             <h2 className="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
               <ShoppingBag className="w-5 h-5 text-blue-600" />
-              Rincian Produk
+              Rincian Produk ({checkoutItems.length} Item)
             </h2>
-            
-            <div className="flex gap-4 items-center">
-              <div className="w-20 h-20 bg-slate-100 rounded-xl flex items-center justify-center border border-slate-200">
-                <ShoppingBag className="w-8 h-8 text-slate-300" />
+
+            <div className="space-y-4">
+              {checkoutItems.map((item, index) => {
+                const product = item.produk;
+                const orgName = product.sub_toko?.toko?.organisasi?.nama_organisasi ?? "Organisasi";
+
+                return (
+                  <div key={index} className="flex gap-4 items-center border-b border-slate-100 pb-4 last:border-0 last:pb-0">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 bg-slate-50 rounded-xl flex items-center justify-center border border-slate-200 overflow-hidden flex-none">
+                      {product.foto ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={product.foto} alt={product.nama_produk} className="w-full h-full object-cover" />
+                      ) : (
+                        <ShoppingBag className="w-8 h-8 text-slate-300" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <h3 className="font-bold text-slate-800 truncate">{product.nama_produk}</h3>
+                      <p className="text-xs text-slate-500 mb-1">{orgName}</p>
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-semibold text-slate-700">
+                          {item.jumlah} x Rp {Number(product.harga).toLocaleString("id-ID")}
+                        </span>
+                        <span className="font-bold text-blue-600">
+                          Rp {(Number(product.harga) * item.jumlah).toLocaleString("id-ID")}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Rincian Subtotal & Biaya */}
+            <div className="mt-4 pt-4 border-t border-slate-200 space-y-2 text-sm">
+              <div className="flex justify-between text-slate-600">
+                <span>Subtotal Produk</span>
+                <span className="font-semibold text-slate-800">Rp {subtotal.toLocaleString("id-ID")}</span>
               </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-slate-800">{dummyProduct.name}</h3>
-                <p className="text-xs text-slate-500 mb-2">{dummyProduct.organizer}</p>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold text-slate-700">{dummyProduct.quantity} x Rp {dummyProduct.price.toLocaleString("id-ID")}</span>
-                  <span className="font-bold text-blue-600">Rp {(dummyProduct.price * dummyProduct.quantity).toLocaleString("id-ID")}</span>
-                </div>
+              <div className="flex justify-between text-slate-600">
+                <span>Biaya Layanan</span>
+                <span className="font-semibold text-slate-800">Rp {platformFee.toLocaleString("id-ID")}</span>
               </div>
             </div>
           </div>
@@ -365,33 +404,30 @@ export default function CheckoutPage() {
               <Wallet className="w-5 h-5 text-blue-600" />
               Metode Pembayaran
             </h2>
-            
+
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <div 
+              <div
                 onClick={() => handlePaymentSelect("qris")}
-                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
-                  paymentMethod === "qris" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${paymentMethod === "qris" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <QrCode className={`w-6 h-6 ${paymentMethod === "qris" ? "text-blue-600" : "text-slate-400"}`} />
                 <span className={`text-sm font-semibold ${paymentMethod === "qris" ? "text-blue-900" : "text-slate-600"}`}>QRIS</span>
               </div>
-              
-              <div 
+
+              <div
                 onClick={() => handlePaymentSelect("transfer")}
-                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
-                  paymentMethod === "transfer" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${paymentMethod === "transfer" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <CreditCard className={`w-6 h-6 ${paymentMethod === "transfer" ? "text-blue-600" : "text-slate-400"}`} />
                 <span className={`text-sm font-semibold ${paymentMethod === "transfer" ? "text-blue-900" : "text-slate-600"}`}>Transfer Bank</span>
               </div>
 
-              <div 
+              <div
                 onClick={() => handlePaymentSelect("cod")}
-                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
-                  paymentMethod === "cod" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${paymentMethod === "cod" ? "border-blue-600 bg-blue-50" : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <Wallet className={`w-6 h-6 ${paymentMethod === "cod" ? "text-blue-600" : "text-slate-400"}`} />
                 <span className={`text-sm font-semibold ${paymentMethod === "cod" ? "text-blue-900" : "text-slate-600"}`}>COD (Tunai)</span>
@@ -400,7 +436,7 @@ export default function CheckoutPage() {
 
             {showPaymentAlert && (
               <div className="text-red-500 text-sm mt-3 flex items-center gap-1">
-                <AlertCircle className="w-4 h-4"/> Tolong pilih metode pengambilan terlebih dahulu.
+                <AlertCircle className="w-4 h-4" /> Tolong pilih metode pengambilan terlebih dahulu.
               </div>
             )}
           </div>
@@ -412,16 +448,15 @@ export default function CheckoutPage() {
         <div className="max-w-3xl mx-auto flex justify-between items-center">
           <div>
             <p className="text-sm text-slate-500 mb-0.5">Total Pembayaran</p>
-            <p className="text-xl font-extrabold text-blue-600">Rp {(dummyProduct.price * dummyProduct.quantity).toLocaleString("id-ID")}</p>
+            <p className="text-xl font-extrabold text-blue-600">Rp {grandTotal.toLocaleString("id-ID")}</p>
           </div>
           <button
             onClick={handleCheckout}
             disabled={!deliveryMethod || !paymentMethod}
-            className={`px-8 py-3 rounded-xl font-bold text-white transition-all shadow-sm ${
-              (!deliveryMethod || !paymentMethod)
-                ? "bg-slate-300 cursor-not-allowed"
-                : "bg-emerald-600 hover:bg-emerald-700 active:scale-95 hover:shadow-md"
-            }`}
+            className={`px-8 py-3 rounded-xl font-bold text-white transition-all shadow-sm ${(!deliveryMethod || !paymentMethod)
+              ? "bg-slate-300 cursor-not-allowed"
+              : "bg-emerald-600 hover:bg-emerald-700 active:scale-95 hover:shadow-md"
+              }`}
           >
             Buat Pesanan
           </button>
@@ -474,7 +509,7 @@ export default function CheckoutPage() {
                   <span>Sisa Waktu</span>
                   <span className="font-mono">{formatTime(timeLeft)}</span>
                 </div>
-                
+
                 <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
                   {/* Simulasi Gambar QR Code */}
                   <div className="w-48 h-48 bg-white border border-slate-300 rounded-lg flex items-center justify-center relative overflow-hidden">
@@ -482,7 +517,7 @@ export default function CheckoutPage() {
                     <QrCode className="w-24 h-24 text-slate-800" />
                   </div>
                   <div className="mt-3 text-lg font-extrabold text-blue-600">
-                    Rp {(dummyProduct.price * dummyProduct.quantity).toLocaleString("id-ID")}
+                    Rp {grandTotal.toLocaleString("id-ID")}
                   </div>
                 </div>
 
@@ -501,7 +536,7 @@ export default function CheckoutPage() {
                   <span>Sisa Waktu</span>
                   <span className="font-mono">{formatTime(timeLeft)}</span>
                 </div>
-                
+
                 <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-4 w-full text-left">
                   <p className="text-xs text-slate-500 mb-1 font-semibold">Bank Tujuan</p>
                   <p className="text-sm font-bold text-slate-800 mb-4">Bank BNI (ProkerMart)</p>
@@ -516,7 +551,7 @@ export default function CheckoutPage() {
 
                   <p className="text-xs text-slate-500 mb-1 font-semibold">Total Pembayaran</p>
                   <p className="text-lg font-extrabold text-blue-600">
-                    Rp {(dummyProduct.price * dummyProduct.quantity).toLocaleString("id-ID")}
+                    Rp {grandTotal.toLocaleString("id-ID")}
                   </p>
                 </div>
 

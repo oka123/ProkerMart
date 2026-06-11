@@ -5,6 +5,8 @@ import { usePathname } from "next/navigation";
 import { User, Package, Bell, Ticket, PencilLine, LogOut } from "lucide-react";
 import Image from "next/image";
 import { LogoutButton } from "../logout-button";
+import { useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 const menuItems = [
   {
@@ -46,28 +48,60 @@ const menuItems = [
 
 export function UserSidebar() {
   const pathname = usePathname();
+  const supabase = createClient();
+  const [profile, setProfile] = useState({
+    name: "Loading...",
+    foto: "https://placehold.co/100x100?text=User",
+  });
+
+  useEffect(() => {
+    async function fetchSidebarProfile() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (user) {
+        const { data: pengguna } = await supabase
+          .from("pengguna")
+          .select("nama, foto_profil")
+          .eq("id_pengguna", user.id)
+          .single();
+
+        if (pengguna) {
+          setProfile({
+            name: pengguna.nama || "User",
+            foto:
+              pengguna.foto_profil || "https://placehold.co/100x100?text=User",
+          });
+        }
+      }
+    }
+    fetchSidebarProfile();
+  }, [supabase]);
 
   return (
-    <aside className="w-64 shrink-0 hidden md:block">
+    <aside className="w-48 shrink-0 hidden md:block">
       {/* Profile Summary */}
       <div className="flex items-center gap-3 py-4 border-b border-slate-100 mb-4">
-        <div className="w-12 h-12 bg-slate-200 rounded-full overflow-hidden border border-slate-100">
+        <div className="w-12 h-12 bg-slate-200 rounded-full overflow-hidden border border-slate-100 relative shrink-0">
           <Image
-            src="https://placehold.co/100x100?text=User"
-            width={100}
-            height={100}
+            src={profile.foto}
+            fill
             alt="Profile"
-            className="w-full h-full object-cover"
+            className="object-cover"
+            unoptimized
+            loading="eager"
           />
         </div>
-        <div>
-          <h3 className="font-bold text-sm text-slate-800">Andi123</h3>
+        <div className="min-w-0 flex-1">
+          <h3 className="font-bold text-sm text-slate-800 truncate">
+            {profile.name}
+          </h3>
           <Link
             href="/user/account/profile"
             className="flex items-center gap-1 text-xs text-slate-500 hover:text-primary-600"
           >
-            <PencilLine className="w-3 h-3" />
-            Ubah Profil
+            <PencilLine className="w-3 h-3 shrink-0" />
+            <span className="truncate">Ubah Profil</span>
           </Link>
         </div>
       </div>
@@ -98,22 +132,22 @@ export function UserSidebar() {
                   {item.name}
                 </Link>
 
-                {/* Render Sub Items only if parent item is active */}
-                {item.subItems && isActive && (
-                  <div className="ml-9 space-y-1">
-                    {item.subItems.map((sub) => {
-                      const isSubActive = pathname === sub.href;
+                {/* Sub Menu */}
+                {item.subItems && (
+                  <div className="pl-10 space-y-1">
+                    {item.subItems.map((subItem) => {
+                      const isSubActive = pathname === subItem.href;
                       return (
                         <Link
-                          key={sub.href}
-                          href={sub.href}
-                          className={`block py-1.5 text-sm transition-all ${
+                          key={subItem.name}
+                          href={subItem.href}
+                          className={`block py-1.5 text-xs font-medium transition-colors ${
                             isSubActive
-                              ? "text-primary-600 font-medium"
-                              : "text-slate-600 hover:text-primary-600"
+                              ? "text-primary-600"
+                              : "text-slate-500 hover:text-primary-600"
                           }`}
                         >
-                          {sub.name}
+                          {subItem.name}
                         </Link>
                       );
                     })}
@@ -124,9 +158,8 @@ export function UserSidebar() {
           })}
         </nav>
 
-        {/* Logout Button */}
-        <div className="mt-8 pt-4">
-          <LogoutButton className="flex items-center gap-3 px-3 py-2 w-full text-red-500 hover:text-red-600  rounded-md transition-all group border-none bg-white"></LogoutButton>
+        <div className="pt-4 border-t border-slate-100">
+          <LogoutButton className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-left" />
         </div>
       </div>
     </aside>

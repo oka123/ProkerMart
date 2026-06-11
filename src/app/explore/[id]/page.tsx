@@ -1,7 +1,7 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ShoppingBag, MapPin, ChevronRight, ArrowLeft } from "lucide-react";
+import { ShoppingBag, MapPin, ChevronRight, Clock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ProductActions } from "@/components/explore/ProductActions";
 import { getProductById } from "@/lib/supabase/queries/product";
@@ -95,6 +95,11 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
                 <span className="bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {prokerName}
                 </span>
+                {product.preorder && (
+                  <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                    <Clock className="w-3 h-3" /> Preorder
+                  </span>
+                )}
               </div>
               <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-snug mt-1">
                 {product.nama_produk}
@@ -135,11 +140,11 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
                     {tokoName}
                   </span>
                 </div>
-                {product.sub_toko?.metode_jualan && (
+                {product.metode_jualan && (
                   <div className="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-100">
                     <span className="text-slate-500">Metode: </span>
                     <span className="font-semibold text-slate-800 capitalize">
-                      {product.sub_toko.metode_jualan}
+                      {product.metode_jualan.replace(/,/g, " & ")}
                     </span>
                   </div>
                 )}
@@ -150,6 +155,7 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
 
             {/* Interactive Part — Client Component */}
             <ProductActions
+              productId={product.id_produk}
               price={Number(product.harga)}
               stock={product.stok}
               productName={product.nama_produk}

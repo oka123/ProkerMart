@@ -1,62 +1,140 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, MapPin, ChevronRight, Trash2, MapPinned, X } from "lucide-react";
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  MapPin,
+  ChevronRight,
+  Trash2,
+  MapPinned,
+  X,
+  Loader2,
+} from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { motion, AnimatePresence } from "framer-motion";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import dynamic from "next/dynamic";
+
+const LocationPickerMap = dynamic(
+  () => import("@/components/user/LocationPickerMap"),
+  { ssr: false },
+);
 
 interface Address {
-  id: number;
-  name: string;
-  phone: string;
-  province: string;
-  city: string;
-  district: string;
-  postalCode: string;
-  streetDetails: string;
-  extraDetails?: string;
-  isMain: boolean;
-  type: "Rumah" | "Kantor";
+  id_alamat: string;
+  nama_penerima: string;
+  no_telepon: string;
+  provinsi: string;
+  kota: string;
+  kecamatan: string;
+  kode_pos: string;
+  detail_jalan: string;
+  catatan_tambahan: string;
+  is_utama: boolean;
+  tipe_alamat: string;
+  latitude: number | null;
+  longitude: number | null;
 }
 
-const initialAddresses: Address[] = [
-  {
-    id: 1,
-    name: "Test1",
-    phone: "(+62) 8123123",
-    province: "Test",
-    city: "KAB. Test",
-    district: "Test",
-    postalCode: "12345",
-    streetDetails: "Jl. Test",
-    isMain: true,
-    type: "Rumah",
-  },
-  {
-    id: 2,
-    name: "Test2",
-    phone: "(+62) 8123123",
-    province: "Test",
-    city: "KAB. Test",
-    district: "Test",
-    postalCode: "12345",
-    streetDetails: "Jl. Test",
-    isMain: false,
-    type: "Rumah",
-  },
-];
-
 export default function AddressPage() {
-  const [addresses, setAddresses] = useState<Address[]>(initialAddresses);
+  const router = useRouter();
+  const supabase = createClient();
+
+  const [isLoading, setIsLoading] = useState(true);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [userId, setUserId] = useState<string>("");
+
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
-  const [addressToDelete, setAddressToDelete] = useState<number | null>(null);
+  const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Form State
+  const [formData, setFormData] = useState({
+    nama_penerima: "",
+    no_telepon: "",
+    provinsi: "",
+    kota: "",
+    kecamatan: "",
+    kode_pos: "",
+    detail_jalan: "",
+    catatan_tambahan: "",
+    tipe_alamat: "Rumah",
+    is_utama: false,
+    latitude: -8.7963,
+    longitude: 115.1765,
+  });
+
+  const fetchAddresses = async (uid: string) => {
+    try {
+      const { data, error } = await supabase
+        .from("alamat_pembeli")
+        .select("*")
+        .eq("id_pengguna", uid)
+        .order("is_utama", { ascending: false })
+        .order("tgl_dibuat", { ascending: false });
+
+      if (error) throw error;
+      setAddresses(data || []);
+    } catch (error) {
+      console.error("Error fetching addresses:", error);
+    }
+  };
+
+  useEffect(() => {
+    async function init() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        router.push("/auth/login");
+        return;
+      }
+      setUserId(user.id);
+      await fetchAddresses(user.id);
+      setIsLoading(false);
+    }
+    init();
+  }, [router, supabase]);
 
   const handleOpenModal = (address: Address | null = null) => {
     setEditingAddress(address);
+    if (address) {
+      setFormData({
+        nama_penerima: address.nama_penerima,
+        no_telepon: address.no_telepon,
+        provinsi: address.provinsi,
+        kota: address.kota,
+        kecamatan: address.kecamatan,
+        kode_pos: address.kode_pos,
+        detail_jalan: address.detail_jalan,
+        catatan_tambahan: address.catatan_tambahan || "",
+        tipe_alamat: address.tipe_alamat || "Rumah",
+        is_utama: address.is_utama,
+        latitude: address.latitude || -8.7963,
+        longitude: address.longitude || 115.1765,
+      });
+    } else {
+      setFormData({
+        nama_penerima: "",
+        no_telepon: "",
+        provinsi: "",
+        kota: "",
+        kecamatan: "",
+        kode_pos: "",
+        detail_jalan: "",
+        catatan_tambahan: "",
+        tipe_alamat: "Rumah",
+        is_utama: addresses.length === 0, // First address is automatically main
+        latitude: -8.7963,
+        longitude: 115.1765,
+      });
+    }
     setIsModalOpen(true);
   };
 
@@ -65,27 +143,112 @@ export default function AddressPage() {
     setIsModalOpen(false);
   };
 
-  const handleDeleteClick = (id: number) => {
+  const handleSaveAddress = async () => {
+    if (
+      !formData.nama_penerima ||
+      !formData.no_telepon ||
+      !formData.detail_jalan ||
+      !formData.provinsi ||
+      !formData.kota ||
+      !formData.kecamatan ||
+      !formData.kode_pos
+    ) {
+      toast.error("Mohon lengkapi semua data alamat.");
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      // If setting as main, we need to remove main from others first
+      if (formData.is_utama) {
+        await supabase
+          .from("alamat_pembeli")
+          .update({ is_utama: false })
+          .eq("id_pengguna", userId)
+          .eq("is_utama", true);
+      }
+
+      if (editingAddress) {
+        // Update
+        const { error } = await supabase
+          .from("alamat_pembeli")
+          .update(formData)
+          .eq("id_alamat", editingAddress.id_alamat);
+        if (error) throw error;
+        toast.success("Alamat berhasil diperbarui");
+      } else {
+        // Insert
+        const { error } = await supabase
+          .from("alamat_pembeli")
+          .insert([{ ...formData, id_pengguna: userId }]);
+        if (error) throw error;
+        toast.success("Alamat berhasil ditambahkan");
+      }
+
+      await fetchAddresses(userId);
+      handleCloseModal();
+    } catch (error: any) {
+      toast.error(error.message || "Terjadi kesalahan saat menyimpan alamat");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDeleteClick = (id: string) => {
     setAddressToDelete(id);
     setIsDeleteModalOpen(true);
   };
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (addressToDelete) {
-      setAddresses(addresses.filter((a) => a.id !== addressToDelete));
-      setIsDeleteModalOpen(false);
-      setAddressToDelete(null);
+      try {
+        const { error } = await supabase
+          .from("alamat_pembeli")
+          .delete()
+          .eq("id_alamat", addressToDelete);
+
+        if (error) throw error;
+        toast.success("Alamat berhasil dihapus");
+        await fetchAddresses(userId);
+      } catch (error: any) {
+        toast.error("Gagal menghapus alamat");
+      } finally {
+        setIsDeleteModalOpen(false);
+        setAddressToDelete(null);
+      }
     }
   };
 
-  const setAsMain = (id: number) => {
-    setAddresses(
-      addresses.map((a) => ({
-        ...a,
-        isMain: a.id === id,
-      })),
-    );
+  const setAsMain = async (id: string) => {
+    try {
+      // Remove previous main
+      await supabase
+        .from("alamat_pembeli")
+        .update({ is_utama: false })
+        .eq("id_pengguna", userId)
+        .eq("is_utama", true);
+
+      // Set new main
+      const { error } = await supabase
+        .from("alamat_pembeli")
+        .update({ is_utama: true })
+        .eq("id_alamat", id);
+
+      if (error) throw error;
+      toast.success("Alamat utama diperbarui");
+      await fetchAddresses(userId);
+    } catch (error) {
+      toast.error("Gagal mengatur alamat utama");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
+        <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col font-sans text-slate-800">
@@ -95,23 +258,18 @@ export default function AddressPage() {
 
       <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
         <div className="lg:flex lg:gap-6">
-          {/* Desktop Sidebar */}
           <aside className="hidden lg:block shrink-0">
             <UserSidebar />
           </aside>
 
-          {/* Main Content Area */}
           <div className="flex-1 min-w-0">
-            {/* Mobile Header */}
             <MobileHeader
               title="Alamat Saya"
               backHref="/user/account/profile"
               rightActions={[]}
             />
 
-            {/* Content Container */}
-            <div className="bg-white lg:rounded-sm lg:shadow-sm min-h-150 flex flex-col">
-              {/* Desktop Header */}
+            <div className="bg-white lg:rounded-sm lg:shadow-sm min-h-112.5 flex flex-col">
               <div className="hidden lg:flex items-center justify-between p-6 border-b border-slate-100">
                 <h2 className="text-lg font-medium text-slate-900">
                   Alamat Saya
@@ -125,7 +283,6 @@ export default function AddressPage() {
                 </button>
               </div>
 
-              {/* Address List */}
               <div className="flex-1">
                 <div className="px-4 lg:px-6 py-2 border-b border-slate-50 lg:hidden">
                   <span className="text-sm text-slate-400 font-medium">
@@ -136,44 +293,40 @@ export default function AddressPage() {
                 {addresses.length > 0 ? (
                   addresses.map((address) => (
                     <div
-                      key={address.id}
+                      key={address.id_alamat}
                       className="p-4 lg:p-6 border-b border-slate-100 last:border-none hover:bg-slate-50/30 transition-colors"
                     >
                       <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
                         <div className="flex-1 space-y-1">
-                          {/* Name & Phone */}
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="font-semibold text-slate-900 border-r pr-2 border-slate-200">
-                              {address.name}
+                              {address.nama_penerima}
                             </span>
                             <span className="text-slate-500 text-sm">
-                              {address.phone}
+                              {address.no_telepon}
                             </span>
-                            {address.isMain && (
+                            {address.is_utama && (
                               <span className="px-1.5 py-0.5 border border-primary-600 text-primary-600 text-[10px] uppercase font-bold rounded-sm ml-2">
                                 Utama
                               </span>
                             )}
                           </div>
 
-                          {/* Address Details */}
                           <div className="text-sm text-slate-500 leading-relaxed max-w-2xl">
-                            <p>{address.streetDetails}</p>
+                            <p>{address.detail_jalan}</p>
                             <p>
-                              {address.district}, {address.city},{" "}
-                              {address.province}, ID {address.postalCode}
+                              {address.kecamatan}, {address.kota},{" "}
+                              {address.provinsi}, ID {address.kode_pos}
                             </p>
                           </div>
 
-                          {/* Type Badge (Mobile Only) */}
                           <div className="lg:hidden mt-2">
                             <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-sm">
-                              {address.type}
+                              {address.tipe_alamat}
                             </span>
                           </div>
                         </div>
 
-                        {/* Actions */}
                         <div className="flex flex-col items-end gap-3 shrink-0">
                           <div className="flex items-center gap-4 text-sm font-medium">
                             <button
@@ -182,9 +335,11 @@ export default function AddressPage() {
                             >
                               Ubah
                             </button>
-                            {!address.isMain && (
+                            {!address.is_utama && (
                               <button
-                                onClick={() => handleDeleteClick(address.id)}
+                                onClick={() =>
+                                  handleDeleteClick(address.id_alamat)
+                                }
                                 className="text-red-500 hover:underline"
                               >
                                 Hapus
@@ -192,10 +347,10 @@ export default function AddressPage() {
                             )}
                           </div>
                           <button
-                            disabled={address.isMain}
-                            onClick={() => setAsMain(address.id)}
+                            disabled={address.is_utama}
+                            onClick={() => setAsMain(address.id_alamat)}
                             className={`px-3 py-1.5 border rounded-sm text-sm transition-all ${
-                              address.isMain
+                              address.is_utama
                                 ? "border-slate-200 text-slate-400 cursor-default"
                                 : "border-slate-300 text-slate-700 hover:bg-slate-50"
                             }`}
@@ -215,7 +370,6 @@ export default function AddressPage() {
               </div>
             </div>
 
-            {/* Mobile Sticky Button */}
             <div className="lg:hidden p-4 sticky bottom-0 bg-[#f5f5f5]">
               <button
                 onClick={() => handleOpenModal()}
@@ -244,9 +398,8 @@ export default function AddressPage() {
               initial={{ y: "100%", opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: "100%", opacity: 0 }}
-              className="relative bg-white w-full h-full lg:h-auto lg:max-w-xl lg:rounded-md shadow-xl overflow-hidden flex flex-col"
+              className="relative bg-white w-full h-full lg:h-auto lg:max-h-[90vh] lg:max-w-xl lg:rounded-md shadow-xl overflow-hidden flex flex-col"
             >
-              {/* Modal Header */}
               <div className="flex items-center justify-between p-4 border-b border-slate-100">
                 <h3 className="text-lg font-medium text-slate-900">
                   {editingAddress ? "Ubah Alamat" : "Alamat Baru"}
@@ -259,66 +412,145 @@ export default function AddressPage() {
                 </button>
               </div>
 
-              {/* Form Content */}
               <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
-                {/* Auto Fill Info (Shopee Style) */}
-                <div className="bg-red-50/50 border border-red-100 rounded-lg p-3 flex gap-3">
-                  <MapPin className="w-5 h-5 text-primary-600 shrink-0 mt-0.5" />
-                  <div className="text-xs text-slate-600 space-y-1">
-                    <p className="font-semibold">Tempel dan Isi Otomatis</p>
-                    <p className="text-slate-500">
-                      Tempel atau masukkan informasi. Klik &quot;Isi&quot; untuk
-                      mengisi nama, no. HP, dan alamat.
-                    </p>
-                    <div className="mt-2 bg-white border border-slate-200 rounded p-2 text-slate-300">
-                      Tempel atau masukkan informasi...
-                    </div>
-                  </div>
-                </div>
-
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
                       type="text"
-                      placeholder="Nama Lengkap"
-                      defaultValue={editingAddress?.name}
+                      placeholder="Nama Penerima"
+                      value={formData.nama_penerima}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          nama_penerima: e.target.value,
+                        })
+                      }
                       className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                     <input
                       type="text"
                       placeholder="Nomor Telepon"
-                      defaultValue={editingAddress?.phone}
+                      value={formData.no_telepon}
+                      onChange={(e) =>
+                        setFormData({ ...formData, no_telepon: e.target.value })
+                      }
                       className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                   </div>
 
-                  <div className="relative group">
+                  <div className="grid grid-cols-2 gap-4">
                     <input
                       type="text"
-                      placeholder="Provinsi, Kota, Kecamatan, Kode Pos"
-                      defaultValue={
-                        editingAddress
-                          ? `${addressingToString(editingAddress)}`
-                          : ""
+                      placeholder="Provinsi"
+                      value={formData.provinsi}
+                      onChange={(e) =>
+                        setFormData({ ...formData, provinsi: e.target.value })
                       }
-                      readOnly
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm pr-10 cursor-pointer bg-slate-50/30"
+                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
-                    <ChevronRight className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="text"
+                      placeholder="Kota / Kabupaten"
+                      value={formData.kota}
+                      onChange={(e) =>
+                        setFormData({ ...formData, kota: e.target.value })
+                      }
+                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Kecamatan"
+                      value={formData.kecamatan}
+                      onChange={(e) =>
+                        setFormData({ ...formData, kecamatan: e.target.value })
+                      }
+                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Kode Pos"
+                      value={formData.kode_pos}
+                      onChange={(e) =>
+                        setFormData({ ...formData, kode_pos: e.target.value })
+                      }
+                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                    />
                   </div>
 
                   <textarea
                     placeholder="Nama Jalan, Gedung, No. Rumah"
                     rows={2}
-                    defaultValue={editingAddress?.streetDetails}
+                    value={formData.detail_jalan}
+                    onChange={(e) =>
+                      setFormData({ ...formData, detail_jalan: e.target.value })
+                    }
                     className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 resize-none"
                   />
 
                   <input
                     type="text"
-                    placeholder="Detail Lainnya (Cth: Blok / Unit No., Patokan)"
+                    placeholder="Catatan Tambahan (Cth: Blok / Unit No., Patokan)"
+                    value={formData.catatan_tambahan}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        catatan_tambahan: e.target.value,
+                      })
+                    }
                     className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
                   />
+
+                  <div className="space-y-3 pt-4 border-t border-slate-50">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm font-medium text-slate-700">
+                        Titik Koordinat Lokasi
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (navigator.geolocation) {
+                            navigator.geolocation.getCurrentPosition(
+                              (position) => {
+                                setFormData({
+                                  ...formData,
+                                  latitude: position.coords.latitude,
+                                  longitude: position.coords.longitude,
+                                });
+                              },
+                              () => {
+                                toast.error(
+                                  "Gagal mendapatkan lokasi. Pastikan izin lokasi aktif.",
+                                );
+                              },
+                            );
+                          }
+                        }}
+                        className="text-xs text-primary-600 font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                      >
+                        <MapPin className="w-3 h-3" />
+                        Gunakan Lokasi Saat Ini
+                      </button>
+                    </div>
+                    <div className="w-full h-48 bg-slate-100 rounded-sm overflow-hidden z-0">
+                      <LocationPickerMap
+                        initialLocation={{
+                          lat: formData.latitude,
+                          lng: formData.longitude,
+                        }}
+                        onChange={(loc) =>
+                          setFormData({
+                            ...formData,
+                            latitude: loc.lat,
+                            longitude: loc.lng,
+                          })
+                        }
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500">
+                      Geser pin pada peta untuk menentukan titik koordinat yang
+                      lebih presisi.
+                    </p>
+                  </div>
                 </div>
 
                 <div className="space-y-4 pt-4 border-t border-slate-50">
@@ -326,8 +558,18 @@ export default function AddressPage() {
                     <span className="text-sm text-slate-600">
                       Atur sebagai Alamat Utama
                     </span>
-                    <div className="w-12 h-6 bg-slate-200 rounded-full relative cursor-pointer">
-                      <div className="absolute left-1 top-1 w-4 h-4 bg-white rounded-full transition-transform" />
+                    <div
+                      className={`w-12 h-6 rounded-full relative cursor-pointer transition-colors ${formData.is_utama ? "bg-primary-600" : "bg-slate-200"}`}
+                      onClick={() =>
+                        setFormData({
+                          ...formData,
+                          is_utama: !formData.is_utama,
+                        })
+                      }
+                    >
+                      <div
+                        className={`absolute top-1 w-4 h-4 bg-white rounded-full transition-all ${formData.is_utama ? "left-7" : "left-1"}`}
+                      />
                     </div>
                   </div>
 
@@ -339,9 +581,12 @@ export default function AddressPage() {
                       {["Kantor", "Rumah"].map((type) => (
                         <button
                           key={type}
+                          onClick={() =>
+                            setFormData({ ...formData, tipe_alamat: type })
+                          }
                           className={`px-6 py-2 border rounded-sm text-sm transition-all ${
-                            (editingAddress?.type || "Rumah") === type
-                              ? "border-primary-600 text-primary-600"
+                            formData.tipe_alamat === type
+                              ? "border-primary-600 text-primary-600 bg-primary-50"
                               : "border-slate-200 text-slate-600 hover:bg-slate-50"
                           }`}
                         >
@@ -353,15 +598,19 @@ export default function AddressPage() {
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className="p-4 border-t border-slate-100 flex gap-3 lg:justify-end">
                 <button
                   onClick={handleCloseModal}
                   className="flex-1 lg:flex-none px-8 py-2 border border-slate-200 text-slate-600 rounded-sm hover:bg-slate-50 transition-all"
                 >
-                  Nanti Saja
+                  Batal
                 </button>
-                <button className="flex-1 lg:flex-none px-12 py-2 bg-primary-600 text-white rounded-sm hover:bg-primary-700 shadow-md transition-all font-medium">
+                <button
+                  onClick={handleSaveAddress}
+                  disabled={isSaving}
+                  className="flex-1 lg:flex-none px-12 py-2 bg-primary-600 text-white rounded-sm hover:bg-primary-700 shadow-md transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   Simpan
                 </button>
               </div>
@@ -417,8 +666,4 @@ export default function AddressPage() {
       </AnimatePresence>
     </div>
   );
-}
-
-function addressingToString(addr: Address) {
-  return `${addr.province}, ${addr.city}, ${addr.district}, ${addr.postalCode}`;
 }

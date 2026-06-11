@@ -44,13 +44,19 @@ export function NearbyShopCard({
         <p className="text-xs text-slate-500 mb-2">{categories}</p>
 
         <div className="flex items-center text-xs text-slate-600 gap-2 mb-2">
-          <div className="flex items-center text-amber-500 font-medium">
-            <Star className="w-3.5 h-3.5 fill-current mr-1" />
-            {rating}{" "}
-            <span className="text-slate-400 font-normal ml-1">
-              ({reviewCount})
-            </span>
-          </div>
+          {Number(reviewCount) > 0 ? (
+            <div className="flex items-center text-amber-500 font-medium">
+              <Star className="w-3.5 h-3.5 fill-current mr-1" />
+              {Number(rating).toFixed(1)}{" "}
+              <span className="text-slate-400 font-normal ml-1">
+                ({reviewCount})
+              </span>
+            </div>
+          ) : (
+            <div className="text-slate-400 italic text-[10px]">
+              Belum ada ulasan
+            </div>
+          )}
           <span className="text-slate-300">|</span>
           <div className="flex items-center gap-1">
             <MapPin className="w-3.5 h-3.5" /> {distanceKm} m
@@ -62,12 +68,12 @@ export function NearbyShopCard({
         </div>
 
         <div className="flex gap-2 mt-auto">
-          <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded">
+          {/* <span className="text-[10px] text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded">
             Diskon 100%
-          </span>
-          <span className="text-[10px] text-teal-600 bg-teal-50 border border-teal-100 px-2 py-1 rounded">
+          </span> */}
+          {/* <span className="text-[10px] text-teal-600 bg-teal-50 border border-teal-100 px-2 py-1 rounded">
             Gratis Ongkir
-          </span>
+          </span> */}
         </div>
       </div>
     </div>

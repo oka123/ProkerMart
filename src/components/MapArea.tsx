@@ -4,17 +4,33 @@ import { useEffect, useRef } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
-// Fix leaflet marker icon issue in Next.js
-const customIcon = new L.Icon({
-  iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
-  shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
-  iconSize: [25, 41],
-  iconAnchor: [12, 41],
-  popupAnchor: [1, -34],
-  shadowSize: [41, 41],
-});
+const createCustomIcon = (color: string) => {
+  return L.divIcon({
+    className: "custom-leaflet-marker",
+    html: `<div style="background-color:${color};width:20px;height:20px;border-radius:50%;border:3px solid white;box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+    popupAnchor: [0, -10],
+  });
+};
+
+const ICONS = {
+  pembeli: createCustomIcon("#3b82f6"), // blue-500
+  toko: createCustomIcon("#ef4444"),    // red-500
+  subtoko: createCustomIcon("#10b981"), // emerald-500
+  panitia: createCustomIcon("#8b5cf6"), // violet-500
+  default: createCustomIcon("#64748b"), // slate-500
+};
+
+export type MarkerType = "pembeli" | "toko" | "subtoko" | "panitia" | "default";
+
+export interface MarkerData {
+  id: string;
+  title: string;
+  lat: number;
+  lng: number;
+  type: MarkerType;
+}
 
 interface Location {
   lat: number;
@@ -23,19 +39,14 @@ interface Location {
 
 interface MapAreaProps {
   userLocation: Location;
-  shops: Array<{
-    id: string;
-    name: string;
-    lat: number;
-    lng: number;
-  }>;
+  markers: MarkerData[];
   onMarkerClick?: (id: string) => void;
   activeShopId?: string | null;
 }
 
 export default function MapArea({
   userLocation,
-  shops,
+  markers,
   onMarkerClick,
   activeShopId,
 }: MapAreaProps) {
@@ -81,28 +92,23 @@ export default function MapArea({
     const map = mapInstanceRef.current;
 
     // Clear old markers
-    if (userMarkerRef.current) map.removeLayer(userMarkerRef.current);
     Object.values(markersRef.current).forEach((marker) => map.removeLayer(marker));
     markersRef.current = {};
 
-    // Add user location marker
-    userMarkerRef.current = L.marker([userLocation.lat, userLocation.lng], { icon: customIcon })
-      .addTo(map)
-      .bindPopup("Lokasi Anda");
-
-    // Add shop markers
-    shops.forEach((shop) => {
-      const marker = L.marker([shop.lat, shop.lng], { icon: customIcon })
+    // Add markers
+    markers.forEach((item) => {
+      const icon = ICONS[item.type] || ICONS.default;
+      const marker = L.marker([item.lat, item.lng], { icon })
         .addTo(map)
-        .bindPopup(shop.name);
+        .bindPopup(item.title);
       
-      markersRef.current[shop.id] = marker;
+      markersRef.current[item.id] = marker;
 
       if (onMarkerClick) {
-        marker.on("click", () => onMarkerClick(shop.id));
+        marker.on("click", () => onMarkerClick(item.id));
       }
     });
-  }, [shops, userLocation.lat, userLocation.lng, onMarkerClick]);
+  }, [markers, onMarkerClick]);
 
   // Update view when userLocation changes after mount
   useEffect(() => {
@@ -114,10 +120,10 @@ export default function MapArea({
   // Handle activeShopId changes
   useEffect(() => {
     if (mapInstanceRef.current && activeShopId) {
-      const activeShop = shops.find((s) => s.id === activeShopId);
-      if (activeShop) {
+      const activeMarker = markers.find((m) => m.id === activeShopId);
+      if (activeMarker) {
         // Fly to the active shop
-        mapInstanceRef.current.flyTo([activeShop.lat, activeShop.lng], 16, {
+        mapInstanceRef.current.flyTo([activeMarker.lat, activeMarker.lng], 16, {
           animate: true,
           duration: 0.8,
         });
@@ -129,7 +135,7 @@ export default function MapArea({
         }
       }
     }
-  }, [activeShopId, shops]);
+  }, [activeShopId, markers]);
 
   return (
     <div

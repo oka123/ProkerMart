@@ -2,11 +2,33 @@
 
 import { motion } from "framer-motion";
 import { Navbar } from "@/components/Navbar";
-import { ArrowRight, ShoppingBag, Store, Zap, ShieldCheck } from "lucide-react";
+import { ArrowRight, ShoppingBag, Store, Zap, ShieldCheck, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { useEffect, useState } from "react";
+import { ProductCard } from "@/components/explore/ProductCard";
+import type { Product } from "@/lib/types/product";
 
 export default function Home() {
+  const [trendingProducts, setTrendingProducts] = useState<Product[]>([]);
+  const [isLoadingTrending, setIsLoadingTrending] = useState(true);
+
+  useEffect(() => {
+    async function fetchTrending() {
+      try {
+        const res = await fetch("/api/products?limit=4&sort=terbaru");
+        if (!res.ok) throw new Error("Failed to fetch products");
+        const json = await res.json();
+        setTrendingProducts(json.products || []);
+      } catch (err) {
+        console.error("Error fetching trending products:", err);
+      } finally {
+        setIsLoadingTrending(false);
+      }
+    }
+    fetchTrending();
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -142,77 +164,19 @@ export default function Home() {
             </div>
 
             <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
-              {[
-                {
-                  name: "Paket Nasi Ayam Geprek",
-                  org: "BEM FMIPA",
-                  price: "Rp 15.000",
-                  tag: "Pre-order",
-                  tagColor:
-                    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-                },
-                {
-                  name: "Merchandise Kaos Dies Natalis",
-                  org: "HIMA TI",
-                  price: "Rp 85.000",
-                  tag: "Ready Stock",
-                  tagColor:
-                    "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-                },
-                {
-                  name: "Gantungan Kunci Kustom",
-                  org: "UKM Kesenian",
-                  price: "Rp 10.000",
-                  tag: "Pre-order",
-                  tagColor:
-                    "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-                },
-                {
-                  name: "Snack Box Rapat",
-                  org: "DPM Universitas",
-                  price: "Rp 12.000",
-                  tag: "Keliling",
-                  tagColor:
-                    "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-                },
-              ].map((item, i) => (
-                <motion.div
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: i * 0.1, duration: 0.4 }}
-                  className="bg-white dark:bg-slate-800 rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 hover:shadow-xl hover:shadow-slate-200/50 dark:hover:shadow-black/30 transition-all group cursor-pointer"
-                >
-                  <div className="aspect-4/3 bg-slate-100 dark:bg-slate-700/50 relative overflow-hidden flex items-center justify-center transition-colors">
-                    {/* Placeholder for image */}
-                    <ShoppingBag className="w-12 h-12 text-slate-300 dark:text-slate-500 group-hover:scale-110 transition-transform duration-500" />
-                    <div className="absolute top-3 left-3">
-                      <span
-                        className={`px-2 py-1 rounded-md text-xs font-bold ${item.tagColor}`}
-                      >
-                        {item.tag}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="p-5">
-                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1 transition-colors">
-                      {item.org}
-                    </p>
-                    <h3 className="font-bold text-slate-900 dark:text-white mb-2 group-hover:text-primary-600 dark:group-hover:text-primary-400 transition-colors line-clamp-2">
-                      {item.name}
-                    </h3>
-                    <div className="flex items-center justify-between mt-4">
-                      <span className="font-extrabold text-primary-600 dark:text-primary-400 transition-colors">
-                        {item.price}
-                      </span>
-                      <button className="w-8 h-8 rounded-full bg-primary-50 dark:bg-primary-900/30 text-primary-600 dark:text-primary-400 flex items-center justify-center hover:bg-primary-600 hover:text-white dark:hover:bg-primary-600 dark:hover:text-white transition-colors">
-                        +
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
+              {isLoadingTrending ? (
+                <div className="col-span-full flex justify-center py-12">
+                  <Loader2 className="w-8 h-8 animate-spin text-primary-500" />
+                </div>
+              ) : trendingProducts.length > 0 ? (
+                trendingProducts.map((product, i) => (
+                  <ProductCard key={product.id_produk} product={product} index={i} />
+                ))
+              ) : (
+                <div className="col-span-full text-center py-12 text-slate-500">
+                  Belum ada produk.
+                </div>
+              )}
             </div>
 
             <div className="mt-8 text-center sm:hidden">
