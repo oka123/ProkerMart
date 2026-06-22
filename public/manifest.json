@@ -1,0 +1,52 @@
+{
+  "name": "ProkerMart",
+  "short_name": "ProkerMart",
+  "description": "Pusat Belanja Organisasi Mahasiswa",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#2563eb",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/web-app-manifest-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/favicon/web-app-manifest-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1889x826",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tampilan Desktop ProkerMart"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "522x794",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tampilan Mobile ProkerMart"
+    }
+  ]
+}

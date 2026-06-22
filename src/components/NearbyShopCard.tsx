@@ -10,6 +10,7 @@ interface NearbyShopCardProps {
   travelTimeMin: number;
   imageUrl: string;
   promoTag?: string;
+  displayName?: string;
 }
 
 export function NearbyShopCard({
@@ -20,6 +21,7 @@ export function NearbyShopCard({
   distanceKm,
   travelTimeMin,
   promoTag,
+  displayName,
 }: NearbyShopCardProps) {
   return (
     <div className="flex bg-white rounded-xl overflow-hidden border border-slate-100 shadow-sm p-3 gap-4 mb-4">
@@ -39,7 +41,7 @@ export function NearbyShopCard({
       {/* Content Container */}
       <div className="flex flex-col flex-1">
         <h3 className="font-bold text-slate-900 text-base leading-tight mb-1">
-          {name}
+          {displayName || name}
         </h3>
         <p className="text-xs text-slate-500 mb-2">{categories}</p>
 

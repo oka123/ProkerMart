@@ -412,7 +412,7 @@ export default function AddressPage() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto p-4 lg:p-6 space-y-6">
+              <div className="flex-1 overflow-y-auto overscroll-none p-4 lg:p-6 space-y-6">
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <input
