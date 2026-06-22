@@ -71,6 +71,46 @@ const mockContacts: Contact[] = [
     isOnline: true,
     type: "admin",
   },
+  {
+    id: 4,
+    name: "HIMAIF - Organisasi 2",
+    avatar: "https://placehold.co/100x100?text=HIMAIF",
+    lastMessage: "Halo kak, stok kaos masih ada?",
+    time: "10:30",
+    unreadCount: 2,
+    isOnline: true,
+    type: "organisasi",
+  },
+  {
+    id: 5,
+    name: "Risol Mayo Kedai 2",
+    avatar: "https://placehold.co/100x100?text=Risol",
+    lastMessage: "Pesanan kakak sedang kami siapkan ya.",
+    time: "Kemarin",
+    unreadCount: 0,
+    isOnline: false,
+    type: "toko",
+  },
+  {
+    id: 6,
+    name: "Admin ProkerMart 2",
+    avatar: "https://placehold.co/100x100?text=Admin",
+    lastMessage: "Terima kasih telah menghubungi kami.",
+    time: "2 Hari lalu",
+    unreadCount: 0,
+    isOnline: true,
+    type: "admin",
+  },
+  {
+    id: 7,
+    name: "Admin ProkerMart 3",
+    avatar: "https://placehold.co/100x100?text=Admin",
+    lastMessage: "Terima kasih telah menghubungi kami.",
+    time: "2 Hari lalu",
+    unreadCount: 0,
+    isOnline: true,
+    type: "admin",
+  },
 ];
 
 const mockMessages: Message[] = [
@@ -104,7 +144,14 @@ const mockMessages: Message[] = [
   },
   {
     id: 5,
-    text: "Halo kak, stok kaos masih ada?",
+    text: "Halo kak, stok kaos masih ada",
+    sender: "them",
+    timestamp: "10:30",
+    status: "sent",
+  },
+  {
+    id: 6,
+    text: "Silahkan diorder",
     sender: "them",
     timestamp: "10:30",
     status: "sent",
@@ -122,7 +169,7 @@ export function Chat() {
 
   useEffect(() => {
     const supabase = createClient();
-    
+
     // Get initial session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
@@ -130,7 +177,9 @@ export function Chat() {
     });
 
     // Listen to auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       setUser(session?.user ?? null);
       setLoading(false);
     });
@@ -207,7 +256,7 @@ export function Chat() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed z-101 bg-white shadow-2xl overflow-hidden flex flex-col
+            className={`fixed z-101 bg-white shadow-2xl  flex flex-col
               ${/* Responsive Logic */ ""}
               inset-0 lg:inset-auto lg:bottom-0 lg:right-0 lg:w-100 lg:h-150 lg:rounded-2xl border border-slate-100
             `}
@@ -274,7 +323,7 @@ export function Chat() {
             </div>
 
             {/* --- BODY --- */}
-            <div className="flex-1 overflow-hidden flex flex-col bg-slate-50/50">
+            <div className="flex-1 flex flex-col bg-slate-50/50 min-h-0">
               <AnimatePresence mode="wait">
                 {view === "list" ? (
                   <motion.div
@@ -282,7 +331,7 @@ export function Chat() {
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: -20 }}
-                    className="flex-1 flex flex-col"
+                    className="flex-1 flex flex-col min-h-0"
                   >
                     {/* Search Bar */}
                     <div className="p-3 bg-white border-b border-slate-100">
@@ -297,7 +346,7 @@ export function Chat() {
                     </div>
 
                     {/* Contacts List */}
-                    <div className="flex-1 overflow-y-auto divide-y divide-slate-50">
+                    <div className="flex-1 overflow-y-auto overscroll-none divide-y divide-slate-50">
                       {mockContacts.map((contact) => (
                         <button
                           key={contact.id}
@@ -350,12 +399,12 @@ export function Chat() {
                     initial={{ opacity: 0, x: 20 }}
                     animate={{ opacity: 1, x: 0 }}
                     exit={{ opacity: 0, x: 20 }}
-                    className="flex-1 flex flex-col overflow-hidden"
+                    className="flex-1 flex flex-col min-h-0"
                   >
                     {/* Messages Area */}
                     <div
                       ref={scrollRef}
-                      className="flex-1 overflow-y-auto p-4 space-y-4"
+                      className="flex-1 p-4 space-y-4 overflow-y-auto overscroll-none"
                     >
                       <div className="text-center py-2">
                         <span className="text-[10px] bg-slate-200/50 text-slate-500 px-3 py-1 rounded-full uppercase tracking-wider font-semibold">

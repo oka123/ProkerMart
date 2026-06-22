@@ -137,7 +137,7 @@ export function FilterModal({
             </div>
 
             {/* Scrollable body */}
-            <div className="flex-1 overflow-y-scroll px-6 py-5 space-y-7">
+            <div className="flex-1 overflow-y-scroll overscroll-none px-6 py-5 space-y-7">
               {/* Price Range */}
               <section>
                 <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">
