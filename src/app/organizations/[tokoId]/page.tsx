@@ -3,7 +3,14 @@
 import { useParams, useRouter } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
-import { ArrowLeft, MapPin, Store, Package, Loader2, ExternalLink } from "lucide-react";
+import {
+  ArrowLeft,
+  MapPin,
+  Store,
+  Package,
+  Loader2,
+  ExternalLink,
+} from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { createBrowserClient } from "@supabase/ssr";
@@ -32,13 +39,14 @@ function TokoDetailContent() {
 
       const supabase = createBrowserClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!
+        process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
       );
 
       try {
         const { data, error } = await supabase
           .from("toko")
-          .select(`
+          .select(
+            `
             id_toko,
             nama_toko,
             deskripsi,
@@ -58,7 +66,8 @@ function TokoDetailContent() {
                 stok
               )
             )
-          `)
+          `,
+          )
           .eq("id_toko", tokoId)
           .single();
 
@@ -68,9 +77,11 @@ function TokoDetailContent() {
           return;
         }
 
-        const org = Array.isArray(data.organisasi) ? data.organisasi[0] : data.organisasi;
+        const org = Array.isArray(data.organisasi)
+          ? data.organisasi[0]
+          : data.organisasi;
         const subTokos = data.sub_toko || [];
-        
+
         // Aggregate all products
         let allProducts: any[] = [];
         subTokos.forEach((st: any) => {
@@ -78,7 +89,7 @@ function TokoDetailContent() {
             const mappedProducts = st.produk.map((p: any) => ({
               ...p,
               subTokoId: st.id_sub_toko,
-              subTokoName: st.nama_proker
+              subTokoName: st.nama_proker,
             }));
             allProducts = [...allProducts, ...mappedProducts];
           }
@@ -91,7 +102,7 @@ function TokoDetailContent() {
           logo: data.logo,
           organisasiName: org ? org.nama_organisasi : "Unknown",
           subTokos: subTokos,
-          allProducts: allProducts
+          allProducts: allProducts,
         });
       } catch (error) {
         console.error("Error fetching toko details:", error);
@@ -120,11 +131,18 @@ function TokoDetailContent() {
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
           <Store className="w-16 h-16 text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">Toko Tidak Ditemukan</h2>
-          <p className="text-slate-500 mb-6">Toko yang Anda cari mungkin telah dihapus atau tidak tersedia.</p>
-          <Link href="/organizations" className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700">
-            Kembali ke Daftar Organisasi
-          </Link>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">
+            Toko Tidak Ditemukan
+          </h2>
+          <p className="text-slate-500 mb-6">
+            Toko yang Anda cari mungkin telah dihapus atau tidak tersedia.
+          </p>
+          <button
+            onClick={() => window.history.back()}
+            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+          >
+            Kembali
+          </button>
         </div>
       </div>
     );
@@ -137,20 +155,27 @@ function TokoDetailContent() {
       {/* Hero Header */}
       <div className="bg-white border-b border-slate-200 pt-8 pb-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <Link href="/organizations" className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-primary-600 mb-6 transition-colors">
+          <button
+            onClick={() => window.history.back()}
+            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-primary-600 mb-6 transition-colors"
+          >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Kembali
-          </Link>
+          </button>
 
           <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
             <div className="w-24 h-24 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 font-bold text-3xl shadow-sm shrink-0 border border-primary-100 overflow-hidden">
               {toko.logo ? (
-                <img src={toko.logo} alt={toko.name} className="w-full h-full object-cover" />
+                <img
+                  src={toko.logo}
+                  alt={toko.name}
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 toko.name.substring(0, 2).toUpperCase()
               )}
             </div>
-            
+
             <div className="flex-1">
               <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full mb-2">
                 {toko.organisasiName}
@@ -166,25 +191,36 @@ function TokoDetailContent() {
 
             <div className="flex gap-4 shrink-0 w-full md:w-auto">
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1 md:flex-none text-center md:text-left">
-                <div className="text-sm text-slate-500 font-medium mb-1">Total Proker</div>
-                <div className="text-2xl font-bold text-slate-900">{toko.subTokos.length}</div>
+                <div className="text-sm text-slate-500 font-medium mb-1">
+                  Total Proker
+                </div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {toko.subTokos.length}
+                </div>
               </div>
               <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1 md:flex-none text-center md:text-left">
-                <div className="text-sm text-slate-500 font-medium mb-1">Total Produk</div>
-                <div className="text-2xl font-bold text-slate-900">{toko.allProducts.length}</div>
+                <div className="text-sm text-slate-500 font-medium mb-1">
+                  Total Produk
+                </div>
+                <div className="text-2xl font-bold text-slate-900">
+                  {toko.allProducts.length}
+                </div>
               </div>
             </div>
           </div>
-          
+
           <div className="mt-8 pt-8 border-t border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">Tentang Toko</h3>
-            <p className="text-slate-600 leading-relaxed max-w-4xl">{toko.description}</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-2">
+              Tentang Toko
+            </h3>
+            <p className="text-slate-600 leading-relaxed max-w-4xl">
+              {toko.description}
+            </p>
           </div>
         </div>
       </div>
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full space-y-16">
-        
         {/* Sub-Toko List */}
         <section>
           <div className="flex items-center justify-between mb-6">
@@ -211,11 +247,13 @@ function TokoDetailContent() {
                   <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
                     <Store className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">{st.nama_proker}</h3>
+                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                    {st.nama_proker}
+                  </h3>
                   <p className="text-sm text-slate-500 mb-6 line-clamp-2 flex-1">
                     {st.deskripsi || "Tidak ada deskripsi"}
                   </p>
-                  
+
                   <div className="flex items-center justify-between mt-auto">
                     <span className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
                       {st.produk?.length || 0} Produk
@@ -255,11 +293,18 @@ function TokoDetailContent() {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.3, delay: i * 0.05 }}
                 >
-                  <Link href={`/explore/${product.id_produk}`} className="block group">
+                  <Link
+                    href={`/explore/${product.id_produk}`}
+                    className="block group"
+                  >
                     <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-primary-300 transition-all">
                       <div className="aspect-square bg-slate-100 relative overflow-hidden">
                         {product.foto ? (
-                          <img src={product.foto} alt={product.nama_produk} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                          <img
+                            src={product.foto}
+                            alt={product.nama_produk}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          />
                         ) : (
                           <div className="w-full h-full flex items-center justify-center text-slate-300">
                             <Package className="w-10 h-10" />
@@ -280,7 +325,7 @@ function TokoDetailContent() {
                           {new Intl.NumberFormat("id-ID", {
                             style: "currency",
                             currency: "IDR",
-                            maximumFractionDigits: 0
+                            maximumFractionDigits: 0,
                           }).format(product.harga)}
                         </p>
                       </div>
@@ -291,7 +336,6 @@ function TokoDetailContent() {
             </div>
           )}
         </section>
-
       </main>
     </div>
   );
@@ -299,13 +343,15 @@ function TokoDetailContent() {
 
 export default function TokoDetailPage() {
   return (
-    <Suspense fallback={
-      <div className="min-h-screen bg-slate-50 flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-slate-50 flex flex-col">
+          <div className="flex-1 flex items-center justify-center">
+            <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
+          </div>
         </div>
-      </div>
-    }>
+      }
+    >
       <TokoDetailContent />
     </Suspense>
   );

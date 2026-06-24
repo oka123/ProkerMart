@@ -15,6 +15,7 @@ import {
   getCartItems,
   updateCartItemQuantity,
   removeFromCart,
+  removeMultipleFromCart,
   type CartItem,
 } from "@/lib/supabase/queries/cart";
 
@@ -24,6 +25,9 @@ export default function CartPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [updatingIds, setUpdatingIds] = useState<Set<string>>(new Set());
   const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState<string | null>(null);
 
   const handleSelectItem = (id: string) => {
     setSelectedItems(
@@ -94,15 +98,42 @@ export default function CartPage() {
   };
 
   const handleRemoveItem = async (cartId: string) => {
-    // Optimistic UI update
-    setCartItems((prev) => prev.filter((item) => item.id_keranjang !== cartId));
-
+    setIsDeleting(true);
     const result = await removeFromCart(cartId);
+    setIsDeleting(false);
+    setShowDeleteModal(false);
+    setItemToDelete(null);
 
-    if (!result.success) {
-      // Revert on error
-      fetchCart();
+    if (result.success) {
+      setCartItems((prev) =>
+        prev.filter((item) => item.id_keranjang !== cartId),
+      );
+      window.dispatchEvent(new Event("cart-updated"));
+    } else {
       console.error("[CartPage - removeItem] Error:", result.error);
+      alert("Gagal menghapus barang.");
+    }
+  };
+
+  const handleDeleteSelected = async () => {
+    if (selectedItems.length === 0) return;
+    setIsDeleting(true);
+
+    const result = await removeMultipleFromCart(selectedItems);
+
+    setIsDeleting(false);
+    setShowDeleteModal(false);
+    setItemToDelete(null);
+
+    if (result.success) {
+      setCartItems((prev) =>
+        prev.filter((item) => !selectedItems.includes(item.id_keranjang)),
+      );
+      setSelectedItems([]);
+      window.dispatchEvent(new Event("cart-updated"));
+    } else {
+      console.error("[CartPage - deleteSelected] Error:", result.error);
+      alert("Gagal menghapus barang terpilih.");
     }
   };
 
@@ -184,19 +215,33 @@ export default function CartPage() {
           <div className="flex flex-col lg:flex-row gap-6 lg:gap-8 items-start">
             {/* KOLOM KIRI: Daftar Produk (Lebar 2/3 di layar besar) */}
             <div className="w-full lg:w-2/3 space-y-4">
-              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center gap-3">
-                <input
-                  type="checkbox"
-                  checked={
-                    selectedItems.length === cartItems.length &&
-                    cartItems.length > 0
-                  }
-                  onChange={handleSelectAll}
-                  className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
-                />
-                <span className="text-sm font-semibold text-slate-700">
-                  Pilih Semua Barang
-                </span>
+              <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    checked={
+                      selectedItems.length === cartItems.length &&
+                      cartItems.length > 0
+                    }
+                    onChange={handleSelectAll}
+                    className="w-5 h-5 text-blue-600 accent-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <span className="text-sm font-semibold text-slate-700">
+                    Pilih Semua Barang
+                  </span>
+                </div>
+                {selectedItems.length > 0 && (
+                  <button
+                    onClick={() => {
+                      setItemToDelete("MULTIPLE");
+                      setShowDeleteModal(true);
+                    }}
+                    className="text-sm font-semibold text-red-500 hover:text-red-600 flex items-center gap-1.5 transition p-1.5 rounded-lg hover:bg-red-50"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Hapus Terpilih ({selectedItems.length})</span>
+                  </button>
+                )}
               </div>
               {cartItems.map((item) => {
                 const product = item.produk;
@@ -214,7 +259,7 @@ export default function CartPage() {
                       type="checkbox"
                       checked={selectedItems.includes(item.id_keranjang)}
                       onChange={() => handleSelectItem(item.id_keranjang)}
-                      className="w-5 h-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer flex-none"
+                      className="w-5 h-5 text-blue-600 accent-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer flex-none"
                     />
                     {/* Gambar Produk */}
                     <div className="w-24 h-24 sm:w-28 sm:h-28 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center flex-none overflow-hidden">
@@ -247,7 +292,10 @@ export default function CartPage() {
                       {/* Aksi: Hapus & Kuantitas */}
                       <div className="flex items-center justify-between mt-3">
                         <button
-                          onClick={() => handleRemoveItem(item.id_keranjang)}
+                          onClick={() => {
+                            setItemToDelete(item.id_keranjang);
+                            setShowDeleteModal(true);
+                          }}
                           className="text-sm font-semibold text-red-500 hover:text-red-600 flex items-center gap-1.5 transition p-1.5 -ml-1.5 rounded-lg hover:bg-red-50"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -355,6 +403,51 @@ export default function CartPage() {
           </div>
         )}
       </div>
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in overscroll-none">
+          <div className="bg-white rounded-2xl shadow-xl max-w-sm w-full p-6 animate-in zoom-in-95">
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              Hapus Barang?
+            </h3>
+            <p className="text-slate-500 text-sm mb-6">
+              Apakah kamu yakin ingin menghapus{" "}
+              {itemToDelete === "MULTIPLE" ? selectedItems.length : 1} barang
+              dari keranjang?
+            </p>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setItemToDelete(null);
+                }}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 font-semibold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition disabled:opacity-50"
+              >
+                Batal
+              </button>
+              <button
+                onClick={() => {
+                  if (itemToDelete === "MULTIPLE") {
+                    handleDeleteSelected();
+                  } else if (itemToDelete) {
+                    handleRemoveItem(itemToDelete);
+                  }
+                }}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 px-4 font-semibold text-white bg-red-600 hover:bg-red-700 rounded-xl transition flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isDeleting ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  "Hapus"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -22,154 +22,41 @@ import Image from "next/image";
 import { createClient } from "@/lib/supabase/client";
 
 interface Message {
-  id: number;
+  id: string;
   text: string;
   sender: "me" | "them";
+  senderName?: string;
   timestamp: string;
   status: "sent" | "delivered" | "read";
 }
 
 interface Contact {
-  id: number;
+  id: string; // id_room
+  id_sub_toko: string;
   name: string;
   avatar: string;
   lastMessage: string;
   time: string;
   unreadCount: number;
   isOnline: boolean;
-  type: "organisasi" | "toko" | "admin";
+  type: string;
+  isPanitiaView?: boolean;
 }
-
-const mockContacts: Contact[] = [
-  {
-    id: 1,
-    name: "HIMAIF - Organisasi",
-    avatar: "https://placehold.co/100x100?text=HIMAIF",
-    lastMessage: "Halo kak, stok kaos masih ada?",
-    time: "10:30",
-    unreadCount: 2,
-    isOnline: true,
-    type: "organisasi",
-  },
-  {
-    id: 2,
-    name: "Risol Mayo Kedai",
-    avatar: "https://placehold.co/100x100?text=Risol",
-    lastMessage: "Pesanan kakak sedang kami siapkan ya.",
-    time: "Kemarin",
-    unreadCount: 0,
-    isOnline: false,
-    type: "toko",
-  },
-  {
-    id: 3,
-    name: "Admin ProkerMart",
-    avatar: "https://placehold.co/100x100?text=Admin",
-    lastMessage: "Terima kasih telah menghubungi kami.",
-    time: "2 Hari lalu",
-    unreadCount: 0,
-    isOnline: true,
-    type: "admin",
-  },
-  {
-    id: 4,
-    name: "HIMAIF - Organisasi 2",
-    avatar: "https://placehold.co/100x100?text=HIMAIF",
-    lastMessage: "Halo kak, stok kaos masih ada?",
-    time: "10:30",
-    unreadCount: 2,
-    isOnline: true,
-    type: "organisasi",
-  },
-  {
-    id: 5,
-    name: "Risol Mayo Kedai 2",
-    avatar: "https://placehold.co/100x100?text=Risol",
-    lastMessage: "Pesanan kakak sedang kami siapkan ya.",
-    time: "Kemarin",
-    unreadCount: 0,
-    isOnline: false,
-    type: "toko",
-  },
-  {
-    id: 6,
-    name: "Admin ProkerMart 2",
-    avatar: "https://placehold.co/100x100?text=Admin",
-    lastMessage: "Terima kasih telah menghubungi kami.",
-    time: "2 Hari lalu",
-    unreadCount: 0,
-    isOnline: true,
-    type: "admin",
-  },
-  {
-    id: 7,
-    name: "Admin ProkerMart 3",
-    avatar: "https://placehold.co/100x100?text=Admin",
-    lastMessage: "Terima kasih telah menghubungi kami.",
-    time: "2 Hari lalu",
-    unreadCount: 0,
-    isOnline: true,
-    type: "admin",
-  },
-];
-
-const mockMessages: Message[] = [
-  {
-    id: 1,
-    text: "Halo kak, selamat siang!",
-    sender: "them",
-    timestamp: "10:00",
-    status: "read",
-  },
-  {
-    id: 2,
-    text: "Siang kak, saya mau tanya soal merchandise Invention.",
-    sender: "me",
-    timestamp: "10:05",
-    status: "read",
-  },
-  {
-    id: 3,
-    text: "Tentu kak, mau tanya bagian mananya?",
-    sender: "them",
-    timestamp: "10:06",
-    status: "read",
-  },
-  {
-    id: 4,
-    text: "Apakah stok kaos yang ukuran XL masih tersedia?",
-    sender: "me",
-    timestamp: "10:10",
-    status: "delivered",
-  },
-  {
-    id: 5,
-    text: "Halo kak, stok kaos masih ada",
-    sender: "them",
-    timestamp: "10:30",
-    status: "sent",
-  },
-  {
-    id: 6,
-    text: "Silahkan diorder",
-    sender: "them",
-    timestamp: "10:30",
-    status: "sent",
-  },
-];
 
 export function Chat() {
   const [isOpen, setIsOpen] = useState(false);
   const [view, setView] = useState<"list" | "chat">("list");
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [selectedContact, setSelectedContact] = useState<Contact | null>(null);
   const [newMessage, setNewMessage] = useState("");
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
+  
+  const supabase = createClient();
 
   useEffect(() => {
-    const supabase = createClient();
-
     // Get initial session
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
@@ -189,28 +76,272 @@ export function Chat() {
     };
   }, []);
 
+  // Fetch Contacts
+  useEffect(() => {
+    if (!user) return;
+    fetchContacts();
+  }, [user]);
+
+  const fetchContacts = async () => {
+    const { data: userData } = await supabase.from('pengguna').select('role').eq('id_pengguna', user.id).single();
+    const role = userData?.role || 'pembeli';
+
+    let rooms: Contact[] = [];
+
+    if (role === 'pembeli') {
+      const { data: rawRooms } = await supabase
+        .from('chat_rooms')
+        .select(`
+          id_room,
+          id_sub_toko,
+          sub_toko (
+            nama_proker,
+            foto_sampul,
+            toko (nama_toko)
+          ),
+          chat_messages (pesan, created_at)
+        `)
+        .eq('id_pembeli', user.id)
+        .order('created_at', { referencedTable: 'chat_messages', ascending: true });
+        
+      rooms = (rawRooms || []).map((r: any) => {
+        const msgs = r.chat_messages || [];
+        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+        const subToko = r.sub_toko;
+        const tokoName = Array.isArray(subToko?.toko) ? subToko?.toko[0]?.nama_toko : subToko?.toko?.nama_toko;
+        const displayName = tokoName ? `${tokoName} - ${subToko.nama_proker}` : subToko?.nama_proker;
+
+        return {
+          id: r.id_room,
+          id_sub_toko: r.id_sub_toko,
+          name: displayName || "Toko",
+          avatar: subToko?.foto_sampul || `https://placehold.co/100x100?text=${encodeURIComponent(displayName?.charAt(0) || 'T')}`,
+          lastMessage: lastMsg ? lastMsg.pesan : "Belum ada pesan",
+          time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
+          unreadCount: 0,
+          isOnline: true,
+          type: "toko",
+          isPanitiaView: false
+        };
+      });
+    } else {
+      // Panitia / Proker view
+      const { data: rawRooms } = await supabase
+        .from('chat_rooms')
+        .select(`
+          id_room,
+          id_sub_toko,
+          pengguna (nama),
+          chat_messages (pesan, created_at)
+        `)
+        .order('created_at', { referencedTable: 'chat_messages', ascending: true });
+        
+      rooms = (rawRooms || []).map((r: any) => {
+        const msgs = r.chat_messages || [];
+        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
+        const buyer = Array.isArray(r.pengguna) ? r.pengguna[0] : r.pengguna;
+
+        return {
+          id: r.id_room,
+          id_sub_toko: r.id_sub_toko,
+          name: buyer?.nama || "Pembeli",
+          avatar: `https://placehold.co/100x100?text=${encodeURIComponent(buyer?.nama?.charAt(0) || 'P')}`,
+          lastMessage: lastMsg ? lastMsg.pesan : "Belum ada pesan",
+          time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
+          unreadCount: 0,
+          isOnline: true,
+          type: "pembeli",
+          isPanitiaView: true
+        };
+      });
+    }
+
+    setContacts(rooms);
+  };
+
   // Listen for global open event
   useEffect(() => {
-    const handleOpenChat = () => setIsOpen(true);
+    const handleOpenChat = async (e: Event) => {
+      const customEvent = e as CustomEvent;
+      setIsOpen(true);
+      if (customEvent.detail && customEvent.detail.id_sub_toko) {
+        const { id_sub_toko, name, type, avatar } = customEvent.detail;
+        
+        let room = contacts.find(c => c.id_sub_toko === id_sub_toko);
+        
+        if (!room) {
+          // Buat room baru
+          const { data: newRoom, error } = await supabase
+            .from('chat_rooms')
+            .insert({ id_pembeli: user?.id, id_sub_toko })
+            .select()
+            .single();
+            
+          if (!error && newRoom) {
+            room = {
+              id: newRoom.id_room,
+              id_sub_toko,
+              name,
+              avatar: avatar || `https://placehold.co/100x100?text=${encodeURIComponent(name?.charAt(0) || 'T')}`,
+              lastMessage: "Belum ada pesan",
+              time: "Baru saja",
+              unreadCount: 0,
+              isOnline: true,
+              type: type || "toko",
+            };
+            setContacts(prev => [room!, ...prev]);
+          } else if (error && error.code === '23505') {
+            // Already exists
+            const { data: existingRoom } = await supabase
+              .from('chat_rooms')
+              .select('id_room')
+              .eq('id_pembeli', user?.id)
+              .eq('id_sub_toko', id_sub_toko)
+              .single();
+              
+            if (existingRoom) {
+               room = {
+                  id: existingRoom.id_room,
+                  id_sub_toko,
+                  name,
+                  avatar: avatar || `https://placehold.co/100x100?text=${encodeURIComponent(name?.charAt(0) || 'T')}`,
+                  lastMessage: "Belum ada pesan",
+                  time: "Baru saja",
+                  unreadCount: 0,
+                  isOnline: true,
+                  type: type || "toko",
+               };
+               setContacts(prev => [room!, ...prev]);
+            }
+          }
+        }
+        
+        if (room) {
+          setSelectedContact(room);
+          setView("chat");
+        }
+      }
+    };
     window.addEventListener("openProkerChat", handleOpenChat);
     return () => window.removeEventListener("openProkerChat", handleOpenChat);
-  }, []);
+  }, [user, contacts]);
+
+  // Load Messages and Subscription
+  useEffect(() => {
+    if (!selectedContact || !user) return;
+
+    const fetchMessages = async () => {
+      const { data } = await supabase
+        .from('chat_messages')
+        .select('*, pengguna(nama, role)')
+        .eq('id_room', selectedContact.id)
+        .order('created_at', { ascending: true });
+      
+      if (data) {
+        const msgs = data.map((m: any) => {
+          const userObj = Array.isArray(m.pengguna) ? m.pengguna[0] : m.pengguna;
+          return {
+            id: m.id_message,
+            text: m.pesan,
+            sender: (m.id_pengirim === user.id ? "me" : "them") as "me" | "them",
+            senderName: m.id_pengirim !== user.id && userObj?.role === 'proker' ? userObj.nama : undefined,
+            timestamp: new Date(m.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+            status: "read" as "sent" | "delivered" | "read"
+          };
+        });
+        setMessages(msgs);
+      }
+    };
+
+    fetchMessages();
+
+    const channel = supabase
+      .channel(`room:${selectedContact.id}`)
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages', filter: `id_room=eq.${selectedContact.id}` },
+        async (payload) => {
+          const newMsg = payload.new as any;
+          if (newMsg.id_pengirim === user.id) {
+             // Will be added locally by handleSendMessage, or handled here if from another device
+             // To prevent duplicates, we can check if it exists
+             setMessages((prev) => {
+               if (prev.find(m => m.id === newMsg.id_message)) return prev;
+               return [...prev, {
+                  id: newMsg.id_message,
+                  text: newMsg.pesan,
+                  sender: "me" as "me" | "them",
+                  timestamp: new Date(newMsg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                  status: "sent" as "sent" | "delivered" | "read"
+               }];
+             });
+          } else {
+             const {data: senderData} = await supabase.from('pengguna').select('nama, role').eq('id_pengguna', newMsg.id_pengirim).single();
+             setMessages((prev) => [...prev, {
+                id: newMsg.id_message,
+                text: newMsg.pesan,
+                sender: "them" as "me" | "them",
+                senderName: senderData?.role === 'proker' ? senderData.nama : undefined,
+                timestamp: new Date(newMsg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+                status: "read" as "sent" | "delivered" | "read"
+             }]);
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedContact, user]);
 
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [selectedContact, view, isOpen]);
+  }, [messages, view, isOpen]);
 
   const handleSelectContact = (contact: Contact) => {
     setSelectedContact(contact);
     setView("chat");
   };
 
-  const handleSendMessage = (e: React.FormEvent) => {
+  const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim()) return;
+    if (!newMessage.trim() || !selectedContact || !user) return;
+    
+    const textToSend = newMessage.trim();
     setNewMessage("");
+
+    // Optimistic UI
+    const tempId = `temp-${Date.now()}`;
+    setMessages(prev => [...prev, {
+      id: tempId,
+      text: textToSend,
+      sender: "me" as "me" | "them",
+      timestamp: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+      status: "sent" as "sent" | "delivered" | "read"
+    }]);
+
+    const { data, error } = await supabase
+      .from('chat_messages')
+      .insert({
+        id_room: selectedContact.id,
+        id_pengirim: user.id,
+        pesan: textToSend,
+      })
+      .select()
+      .single();
+
+    if (!error && data) {
+      setMessages(prev => prev.map(m => m.id === tempId ? {
+        id: data.id_message,
+        text: data.pesan,
+        sender: "me" as "me" | "them",
+        timestamp: new Date(data.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}),
+        status: "delivered" as "sent" | "delivered" | "read"
+      } : m));
+    }
   };
 
   if (loading || !user) return null;
@@ -242,7 +373,7 @@ export function Chat() {
             >
               <MessageSquare className="w-6 h-6" />
               <span className="absolute -top-3 -right-3 bg-secondary-500 text-white text-[10px] font-bold w-5 h-5 rounded-full border-2 border-primary-600 flex items-center justify-center">
-                9
+                !
               </span>
             </motion.div>
           )}
@@ -256,8 +387,7 @@ export function Chat() {
             initial={{ opacity: 0, y: 20, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
-            className={`fixed z-101 bg-white shadow-2xl  flex flex-col
-              ${/* Responsive Logic */ ""}
+            className={`fixed z-101 bg-white shadow-2xl flex flex-col
               inset-0 lg:inset-auto lg:bottom-0 lg:right-0 lg:w-100 lg:h-150 lg:rounded-2xl border border-slate-100
             `}
           >
@@ -287,11 +417,11 @@ export function Chat() {
                       )}
                     </div>
                     <div>
-                      <h3 className="font-semibold text-sm leading-tight">
+                      <h3 className="font-semibold text-sm leading-tight truncate max-w-48">
                         {selectedContact.name}
                       </h3>
                       <span className="text-[10px] opacity-80">
-                        {selectedContact.isOnline ? "Online" : "Offline"}
+                        Online
                       </span>
                     </div>
                   </div>
@@ -303,16 +433,6 @@ export function Chat() {
                 )}
               </div>
               <div className="flex items-center gap-2">
-                {view === "chat" && (
-                  <>
-                    <button className="hover:bg-white/20 p-1.5 rounded-full transition-colors hidden md:block">
-                      <Phone className="w-4 h-4" />
-                    </button>
-                    <button className="hover:bg-white/20 p-1.5 rounded-full transition-colors hidden md:block">
-                      <Video className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
                 <button
                   onClick={() => setIsOpen(false)}
                   className="hover:bg-white/20 p-1.5 rounded-full transition-colors"
@@ -347,50 +467,48 @@ export function Chat() {
 
                     {/* Contacts List */}
                     <div className="flex-1 overflow-y-auto overscroll-none divide-y divide-slate-50">
-                      {mockContacts.map((contact) => (
-                        <button
-                          key={contact.id}
-                          onClick={() => handleSelectContact(contact)}
-                          className="w-full flex items-center gap-3 p-4 bg-white hover:bg-slate-50 transition-colors text-left"
-                        >
-                          <div className="relative shrink-0">
-                            <Image
-                              src={contact.avatar}
-                              alt={contact.name}
-                              width={48}
-                              height={48}
-                              className="rounded-full"
-                            />
-                            {contact.isOnline && (
-                              <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="flex justify-between items-start mb-0.5">
-                              <h4 className="font-semibold text-sm text-slate-900 truncate flex items-center gap-1">
-                                {contact.name}
-                                {contact.type === "admin" && (
-                                  <ShieldCheck className="w-3 h-3 text-blue-500" />
-                                )}
-                                {contact.type === "toko" && (
-                                  <Store className="w-3 h-3 text-orange-500" />
-                                )}
-                              </h4>
-                              <span className="text-[10px] text-slate-400 shrink-0">
-                                {contact.time}
-                              </span>
+                      {contacts.length === 0 ? (
+                        <div className="p-6 text-center text-sm text-slate-500">Belum ada obrolan</div>
+                      ) : (
+                        contacts.map((contact) => (
+                          <button
+                            key={contact.id}
+                            onClick={() => handleSelectContact(contact)}
+                            className="w-full flex items-center gap-3 p-4 bg-white hover:bg-slate-50 transition-colors text-left"
+                          >
+                            <div className="relative shrink-0">
+                              <Image
+                                src={contact.avatar}
+                                alt={contact.name}
+                                width={48}
+                                height={48}
+                                className="rounded-full"
+                              />
+                              {contact.isOnline && (
+                                <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full" />
+                              )}
                             </div>
-                            <p className="text-xs text-slate-500 truncate">
-                              {contact.lastMessage}
-                            </p>
-                          </div>
-                          {contact.unreadCount > 0 && (
-                            <span className="bg-primary-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">
-                              {contact.unreadCount}
-                            </span>
-                          )}
-                        </button>
-                      ))}
+                            <div className="flex-1 min-w-0">
+                              <div className="flex justify-between items-start mb-0.5">
+                                <h4 className="font-semibold text-sm text-slate-900 truncate flex items-center gap-1">
+                                  {contact.name}
+                                </h4>
+                                <span className="text-[10px] text-slate-400 shrink-0">
+                                  {contact.time}
+                                </span>
+                              </div>
+                              <p className="text-xs text-slate-500 truncate">
+                                {contact.lastMessage}
+                              </p>
+                            </div>
+                            {contact.unreadCount > 0 && (
+                              <span className="bg-primary-600 text-white text-[10px] font-bold w-5 h-5 rounded-full flex items-center justify-center shrink-0">
+                                {contact.unreadCount}
+                              </span>
+                            )}
+                          </button>
+                        ))
+                      )}
                     </div>
                   </motion.div>
                 ) : (
@@ -406,13 +524,7 @@ export function Chat() {
                       ref={scrollRef}
                       className="flex-1 p-4 space-y-4 overflow-y-auto overscroll-none"
                     >
-                      <div className="text-center py-2">
-                        <span className="text-[10px] bg-slate-200/50 text-slate-500 px-3 py-1 rounded-full uppercase tracking-wider font-semibold">
-                          Hari Ini
-                        </span>
-                      </div>
-
-                      {mockMessages.map((msg) => (
+                      {messages.map((msg) => (
                         <div
                           key={msg.id}
                           className={`flex ${msg.sender === "me" ? "justify-end" : "justify-start"}`}
@@ -426,6 +538,9 @@ export function Chat() {
                             }
                           `}
                           >
+                            {msg.senderName && (
+                              <p className="text-[10px] font-bold text-primary-600 mb-1">{msg.senderName}</p>
+                            )}
                             <p className="text-sm leading-relaxed">
                               {msg.text}
                             </p>
@@ -457,9 +572,6 @@ export function Chat() {
                           <button className="p-1.5 text-slate-400 hover:text-primary-600 transition-colors">
                             <Paperclip className="w-5 h-5" />
                           </button>
-                          <button className="p-1.5 text-slate-400 hover:text-primary-600 transition-colors hidden sm:block">
-                            <ImageIcon className="w-5 h-5" />
-                          </button>
                         </div>
                         <div className="flex-1 bg-slate-100 rounded-2xl flex items-center px-4 py-1">
                           <textarea
@@ -471,13 +583,10 @@ export function Chat() {
                             onKeyDown={(e) => {
                               if (e.key === "Enter" && !e.shiftKey) {
                                 e.preventDefault();
-                                handleSendMessage(e);
+                                handleSendMessage(e as any);
                               }
                             }}
                           />
-                          <button className="p-1.5 text-slate-400 hover:text-orange-500 transition-colors">
-                            <Smile className="w-5 h-5" />
-                          </button>
                         </div>
                         <button
                           onClick={handleSendMessage}

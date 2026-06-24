@@ -219,6 +219,32 @@ export async function removeFromCart(
 }
 
 /**
+ * Remove multiple items from the cart.
+ */
+export async function removeMultipleFromCart(
+  cartIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("keranjang")
+      .delete()
+      .in("id_keranjang", cartIds);
+
+    if (error) {
+      console.error("[Cart - removeMultipleFromCart] Error:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("[Cart - removeMultipleFromCart] Unexpected error:", err);
+    return { success: false, error: "Terjadi kesalahan tak terduga" };
+  }
+}
+
+/**
  * Get the total count of items in the cart for the current user.
  */
 export async function getCartCount(): Promise<number> {

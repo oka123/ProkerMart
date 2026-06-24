@@ -294,9 +294,9 @@ export default function CheckoutPage() {
 
                       {/* Atau Divider */}
                       <div className="flex items-center gap-3 py-1">
-                        <div className="h-[1px] bg-slate-200 flex-1"></div>
+                        <div className="h-px bg-slate-200 flex-1"></div>
                         <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">Atau</span>
-                        <div className="h-[1px] bg-slate-200 flex-1"></div>
+                        <div className="h-px bg-slate-200 flex-1"></div>
                       </div>
 
                       {/* Input Cari Alamat Peta */}

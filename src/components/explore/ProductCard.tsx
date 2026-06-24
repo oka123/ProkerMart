@@ -57,6 +57,7 @@ export function ProductCard({ product, index }: ProductCardProps) {
     setIsAddingToCart(false);
 
     if (result.success) {
+      window.dispatchEvent(new Event("cart-updated"));
       setShowNotification(true);
       setNotificationError(null);
       setTimeout(() => setShowNotification(false), 3000);
@@ -137,14 +138,16 @@ export function ProductCard({ product, index }: ProductCardProps) {
 
       {/* Success Toast Notification */}
       {showNotification && (
-        <Link href="/cart">
-          <div className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
-            <CheckCircle className="w-5 h-5 text-emerald-400" />
-            <span className="font-semibold text-sm">
-              {product.nama_produk} ditambahkan ke keranjang!
-            </span>
-          </div>
-        </Link>
+        <div className="fixed bottom-8 right-8 z-110">
+          <Link href="/cart">
+            <div className="bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 hover:scale-105 transition-transform cursor-pointer">
+              <CheckCircle className="w-5 h-5 text-emerald-400" />
+              <span className="font-semibold text-sm">
+                {product.nama_produk} ditambahkan ke keranjang!
+              </span>
+            </div>
+          </Link>
+        </div>
       )}
 
       {/* Error Toast Notification */}

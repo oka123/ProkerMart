@@ -4,7 +4,10 @@ import Link from "next/link";
 import { ShoppingBag, MapPin, ChevronRight, Clock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ProductActions } from "@/components/explore/ProductActions";
+import { ProductReviews } from "@/components/explore/ProductReviews";
+import { SellerCard } from "@/components/explore/SellerCard";
 import { getProductById } from "@/lib/supabase/queries/product";
+import { getReviewsBySubToko } from "@/lib/supabase/queries/review";
 
 interface ProductDetailPageProps {
   params: Promise<{ id: string }>;
@@ -29,10 +32,15 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
     notFound();
   }
 
+  const reviews = await getReviewsBySubToko(product.sub_toko.id_sub_toko);
+
   const orgName =
     product.sub_toko?.toko?.organisasi?.nama_organisasi ?? "Organisasi";
   const prokerName = product.sub_toko?.nama_proker ?? "Proker";
   const tokoName = product.sub_toko?.toko?.nama_toko ?? "-";
+
+  const sellerName = prokerName;
+  const sellerType = "toko";
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-6 md:px-8 md:py-10">
@@ -89,12 +97,12 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
             {/* Badge & Title */}
             <div className="mb-5">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">
+                {/* <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">
                   {orgName}
-                </span>
-                <span className="bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                </span> */}
+                {/* <span className="bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
                   <MapPin className="w-3 h-3" /> {prokerName}
-                </span>
+                </span> */}
                 {product.preorder && (
                   <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
                     <Clock className="w-3 h-3" /> Preorder
@@ -159,10 +167,23 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
               price={Number(product.harga)}
               stock={product.stok}
               productName={product.nama_produk}
+              sellerName={sellerName}
+              sellerType={sellerType}
+              subTokoId={product.sub_toko.id_sub_toko}
             />
           </div>
         </div>
       </div>
+
+      {/* Seller Information Card */}
+      <SellerCard sellerInfo={product.sub_toko} />
+
+      {/* Reviews Section */}
+      <ProductReviews
+        productId={product.id_produk}
+        subTokoId={product.sub_toko.id_sub_toko}
+        initialReviews={reviews}
+      />
     </div>
   );
 }

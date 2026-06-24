@@ -17,10 +17,14 @@ const PRODUCT_SELECT = `
   sub_toko (
     id_sub_toko,
     nama_proker,
+    deskripsi,
+    foto_sampul,
     jadwal_operasional,
     toko (
       id_toko,
       nama_toko,
+      deskripsi,
+      logo,
       organisasi (
         id_organisasi,
         nama_organisasi

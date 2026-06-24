@@ -16,8 +16,6 @@ import { MobileHeader } from "./MobileHeader";
 import { createClient } from "@/lib/supabase/client";
 import { getCartItems } from "@/lib/supabase/queries/cart";
 
-
-
 interface NavbarProps {
   variant?: "default" | "cart";
 }
@@ -35,8 +33,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     const fetchCartCount = async () => {
       try {
         const items = await getCartItems();
+        console.log(items);
+
         // Menjumlahkan berdasarkan properti 'jumlah'
-        const total = items.reduce((sum, item) => sum + item.jumlah, 0);
+        const total = items.length;
         setCartCount(total);
       } catch (error) {
         console.error("Gagal mengambil jumlah keranjang:", error);
@@ -44,6 +44,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     };
 
     fetchCartCount();
+
+    window.addEventListener("cart-updated", fetchCartCount);
+    return () => {
+      window.removeEventListener("cart-updated", fetchCartCount);
+    };
   }, []);
 
   useEffect(() => {
@@ -114,10 +119,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
 
   return (
     <nav
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled
-        ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
-        : "bg-white border-b border-slate-200 shadow-sm"
-        }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled
+          ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
+          : "bg-white border-b border-slate-200 shadow-sm"
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
