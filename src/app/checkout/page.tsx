@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useSearchParams } from 'next/navigation';
 import { Navbar } from "@/components/Navbar";
 import {
   ArrowLeft,
@@ -35,66 +36,24 @@ export default function CheckoutPage() {
 
   // States for Notifications/Modals
   const [showToast, setShowToast] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentGatewayState, setPaymentGatewayState] = useState<"loading" | "qris" | "transfer" | null>(null);
-
-  const [paymentStatus, setPaymentStatus] = useState<"PENDING" | "PAID" | "EXPIRED">("PENDING");
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [isCheckingManual, setIsCheckingManual] = useState(false);
 
   const [checkoutItems, setCheckoutItems] = useState<any[]>([]);
 
-  // Logic Hooks
   useEffect(() => {
-    let timer: NodeJS.Timeout;
-    if (showPaymentModal && paymentGatewayState && paymentGatewayState !== "loading" && paymentStatus === "PENDING") {
-      timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev <= 1) {
-            setPaymentStatus("EXPIRED");
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-    }
-    return () => clearInterval(timer);
-  }, [showPaymentModal, paymentGatewayState, paymentStatus]);
+    const snapScript = "https://app.sandbox.midtrans.com/snap/snap.js";
+    const clientKey = process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY || "";
 
-  useEffect(() => {
-    let webhookTimer: NodeJS.Timeout;
-    if (showPaymentModal && paymentGatewayState && paymentGatewayState !== "loading" && paymentStatus === "PENDING") {
-      webhookTimer = setTimeout(() => {
-        setPaymentStatus("PAID");
-      }, 7000);
-    }
-    return () => clearTimeout(webhookTimer);
-  }, [showPaymentModal, paymentGatewayState, paymentStatus]);
+    const script = document.createElement('script');
+    script.src = snapScript;
+    script.setAttribute('data-client-key', clientKey);
+    script.async = true;
+    document.body.appendChild(script);
 
-  useEffect(() => {
-    let redirectTimer: NodeJS.Timeout;
-    if (paymentStatus === "PAID") {
-      redirectTimer = setTimeout(() => {
-        setShowPaymentModal(false);
-        router.push("/user/purchase");
-      }, 5000);
-    }
-    return () => clearTimeout(redirectTimer);
-  }, [paymentStatus, router]);
+    return () => { document.body.removeChild(script); }
+  }, []);
 
-  const formatTime = (seconds: number) => {
-    const m = Math.floor(seconds / 60).toString().padStart(2, "0");
-    const s = (seconds % 60).toString().padStart(2, "0");
-    return `${m}:${s}`;
-  };
 
-  const handleManualCheck = () => {
-    setIsCheckingManual(true);
-    setTimeout(() => {
-      setIsCheckingManual(false);
-      alert("Pembayaran belum terdeteksi. Silakan coba lagi.");
-    }, 1500);
-  };
+
 
   // Dummy Product Data
   useEffect(() => {
@@ -131,25 +90,95 @@ export default function CheckoutPage() {
     setPaymentMethod(method);
   };
 
-  const handleCheckout = () => {
+  const searchParams = useSearchParams();
+  const jalur = searchParams.get('jalur');
+
+  useEffect(() => {
+    if (jalur === 'langsung') {
+      // --- SKENARIO BELI LANGSUNG ---
+      const savedItem = sessionStorage.getItem("directCheckoutItem");
+      if (savedItem) {
+        const parsedItem = JSON.parse(savedItem);
+        console.log("CCTV Beli Langsung:", parsedItem); // Pasang log untuk mengecek
+
+        // Ganti 'setCheckoutItems' dengan nama fungsi state Bli yang sebenarnya
+        setCheckoutItems(parsedItem);
+      }
+    } else {
+      // --- SKENARIO KERANJANG NORMAL ---
+      // Fungsi fetch database HANYA boleh dipanggil di dalam blok 'else' ini
+      // Contoh: fetchCartFromSupabase();
+    }
+  }, [jalur]);
+
+  const handleCheckout = async () => {
     if (!deliveryMethod || !paymentMethod) return;
 
-    if (paymentMethod === "cod") {
-      setShowToast(true);
-      setTimeout(() => {
-        router.push("/user/purchase");
-      }, 2000);
-    } else {
-      setPaymentGatewayState("loading");
-      setPaymentStatus("PENDING");
-      setTimeLeft(300);
-      setIsCheckingManual(false);
-      setShowPaymentModal(true);
+    try {
+      // 1. Tembak API lokal kita dengan data DINAMIS
+      const response = await fetch('/api/checkout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          total_harga: Math.round(grandTotal),
+          nama_kustomer: 'Pembeli',
+          email_kustomer: 'pembeli@prokermart.com',
+          items: checkoutItems,
+          metode_pengambilan: deliveryMethod,
+          metode_pembayaran: paymentMethod,
+          id_pengguna: "123-abc-id-sementara",
+          jalur_checkout: jalur === 'langsung' ? 'langsung' : 'keranjang'
+        })
+      });
 
-      // Simulasi loading 1.5 detik, lalu munculkan QRIS/VA
-      setTimeout(() => {
-        setPaymentGatewayState(paymentMethod === "qris" ? "qris" : "transfer");
-      }, 1500);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Gagal memproses pesanan");
+      }
+
+      if (data.isCod) {
+        localStorage.removeItem("checkoutItems");
+        sessionStorage.removeItem("directCheckoutItem"); // ← bersihkan localStorage
+        setShowToast(true);
+        setTimeout(() => {
+          setShowToast(false);
+          router.replace("/user/purchase"); // ← replace agar tidak bisa back ke checkout
+        }, 2000);
+
+        // 2. Munculkan Pop-up Midtrans jika token berhasil didapat
+      } else if (data.token) {
+        // Menggunakan (window as any) agar TypeScript tidak protes
+        (window as any).snap.pay(data.token, {
+          onSuccess: function (result: any) {
+            console.log('Berhasil!', result);
+            localStorage.removeItem("checkoutItems");
+            sessionStorage.removeItem("directCheckoutItem");
+            router.replace("/user/purchase"); // Arahkan ke pesanan saya
+          },
+          onPending: function (result: any) {
+            console.log('Menunggu pembayaran!', result);
+            localStorage.removeItem("checkoutItems");
+            sessionStorage.removeItem("directCheckoutItem");
+            router.replace("/user/purchase"); // Arahkan ke pesanan saya agar bisa dicek statusnya
+          },
+          onError: function (result: any) {
+            console.log('Gagal!', result);
+            alert("Pembayaran gagal diproses. Silakan coba lagi.");
+          },
+          onClose: function () {
+            console.log('Pop-up ditutup tanpa menyelesaikan pembayaran');
+            // Opsional: Bisa munculkan toast "Pembayaran dibatalkan"
+          }
+        });
+      } else {
+        alert("Gagal mendapatkan token dari server. Silakan coba lagi.");
+      }
+    } catch (error) {
+      console.error("Terjadi kesalahan saat memanggil API Midtrans:", error);
+      alert("Terjadi kesalahan sistem. Pastikan server API berjalan.");
     }
   };
 
@@ -468,103 +497,6 @@ export default function CheckoutPage() {
         <div className="fixed top-24 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in fade-in slide-in-from-top-4">
           <CheckCircle className="w-5 h-5 text-emerald-400" />
           <span className="font-semibold text-sm">Pesanan COD berhasil dibuat! Mengalihkan...</span>
-        </div>
-      )}
-
-      {/* MODAL: Payment Gateway Simulation */}
-      {showPaymentModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm animate-in fade-in p-4">
-          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            {paymentStatus === "PAID" ? (
-              <div className="flex flex-col items-center py-4">
-                <CheckCircle className="w-16 h-16 text-emerald-500 mb-4 animate-bounce" />
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Pembayaran Berhasil</h3>
-                <p className="text-sm text-slate-500 mb-4">Terima kasih, pesanan Anda sedang diproses.</p>
-                <p className="text-xs text-slate-400">Mengarahkan ke halaman pesanan otomatis...</p>
-              </div>
-            ) : paymentStatus === "EXPIRED" ? (
-              <div className="flex flex-col items-center py-4">
-                <div className="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center mb-4">
-                  <span className="text-2xl font-bold">!</span>
-                </div>
-                <h3 className="text-xl font-bold text-slate-800 mb-2">Pembayaran Kedaluwarsa</h3>
-                <p className="text-sm text-slate-500 mb-6">Waktu pembayaran telah habis. Silakan ulangi proses checkout.</p>
-                <button
-                  onClick={() => setShowPaymentModal(false)}
-                  className="w-full bg-slate-800 text-white font-bold py-3 px-4 rounded-xl hover:bg-slate-900 transition-all shadow-sm"
-                >
-                  Tutup
-                </button>
-              </div>
-            ) : paymentGatewayState === "loading" ? (
-              <>
-                <div className="w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mb-6"></div>
-                <h3 className="text-lg font-bold text-slate-800 mb-2">Memproses Pembayaran</h3>
-                <p className="text-sm text-slate-500">Mohon tunggu sebentar, kami sedang menyiapkan gateway pembayaran...</p>
-              </>
-            ) : paymentGatewayState === "qris" ? (
-              <>
-                <h3 className="text-xl font-bold text-slate-800 mb-1">Pembayaran QRIS</h3>
-                <div className="flex justify-between w-full mt-2 mb-4 bg-red-50 text-red-600 px-3 py-2 rounded-lg font-semibold border border-red-100 text-sm">
-                  <span>Sisa Waktu</span>
-                  <span className="font-mono">{formatTime(timeLeft)}</span>
-                </div>
-
-                <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-4">
-                  {/* Simulasi Gambar QR Code */}
-                  <div className="w-48 h-48 bg-white border border-slate-300 rounded-lg flex items-center justify-center relative overflow-hidden">
-                    <div className="absolute inset-2 border-4 border-slate-800 rounded-md"></div>
-                    <QrCode className="w-24 h-24 text-slate-800" />
-                  </div>
-                  <div className="mt-3 text-lg font-extrabold text-blue-600">
-                    Rp {grandTotal.toLocaleString("id-ID")}
-                  </div>
-                </div>
-
-                <button
-                  onClick={handleManualCheck}
-                  disabled={isCheckingManual}
-                  className="w-full bg-white border-2 border-blue-600 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-50 active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm leading-tight"
-                >
-                  {isCheckingManual ? "Mengecek..." : "Klik ini jika pembayaran belum dinyatakan selesai"}
-                </button>
-              </>
-            ) : paymentGatewayState === "transfer" ? (
-              <>
-                <h3 className="text-xl font-bold text-slate-800 mb-1">Transfer Virtual Account</h3>
-                <div className="flex justify-between w-full mt-2 mb-4 bg-red-50 text-red-600 px-3 py-2 rounded-lg font-semibold border border-red-100 text-sm">
-                  <span>Sisa Waktu</span>
-                  <span className="font-mono">{formatTime(timeLeft)}</span>
-                </div>
-
-                <div className="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-4 w-full text-left">
-                  <p className="text-xs text-slate-500 mb-1 font-semibold">Bank Tujuan</p>
-                  <p className="text-sm font-bold text-slate-800 mb-4">Bank BNI (ProkerMart)</p>
-
-                  <p className="text-xs text-slate-500 mb-1 font-semibold">Nomor Virtual Account</p>
-                  <div className="flex items-center justify-between bg-white border border-slate-300 px-3 py-2 rounded-lg mb-4">
-                    <span className="font-mono font-bold text-slate-800 tracking-wider">8273 1029 3847 1122</span>
-                    <button className="text-blue-600 hover:bg-blue-50 p-1.5 rounded-md transition" title="Salin VA">
-                      <Copy className="w-4 h-4" />
-                    </button>
-                  </div>
-
-                  <p className="text-xs text-slate-500 mb-1 font-semibold">Total Pembayaran</p>
-                  <p className="text-lg font-extrabold text-blue-600">
-                    Rp {grandTotal.toLocaleString("id-ID")}
-                  </p>
-                </div>
-
-                <button
-                  onClick={handleManualCheck}
-                  disabled={isCheckingManual}
-                  className="w-full bg-white border-2 border-blue-600 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-50 active:scale-95 transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed text-sm leading-tight"
-                >
-                  {isCheckingManual ? "Mengecek..." : "Klik ini jika pembayaran belum dinyatakan selesai"}
-                </button>
-              </>
-            ) : null}
-          </div>
         </div>
       )}
 

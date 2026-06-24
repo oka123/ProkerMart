@@ -13,6 +13,7 @@ import { addToCart } from "@/lib/supabase/queries/cart";
 import Link from "next/link";
 
 interface ProductActionsProps {
+  product: any;
   productId: string;
   price: number;
   stock: number;
@@ -20,6 +21,7 @@ interface ProductActionsProps {
 }
 
 export function ProductActions({
+  product,
   productId,
   price,
   stock,
@@ -54,7 +56,19 @@ export function ProductActions({
   };
 
   const handleCheckout = () => {
-    router.push("/checkout");
+    // 1. Bungkus data produk persis seperti struktur tabel 'keranjang'
+    const itemBeliLangsung = [
+      {
+        jumlah: quantity,      // Mengambil dari state quantity yang sudah Bli buat
+        produk: product,       // Mengambil dari props product utuh
+      }
+    ];
+
+    // 2. Simpan sementara di memori browser (sessionStorage)
+    sessionStorage.setItem("directCheckoutItem", JSON.stringify(itemBeliLangsung));
+
+    // 3. Pindah ke checkout dengan memberikan "Tanda Pengenal" jalur langsung
+    router.push("/checkout?jalur=langsung");
   };
 
   return (
