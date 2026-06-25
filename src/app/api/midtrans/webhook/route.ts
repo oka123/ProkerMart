@@ -46,11 +46,11 @@ export async function POST(request: Request) {
     let status_pesanan: string | null = null;
 
     if (transaction_status === "settlement") {
-      // Uang sudah masuk (transfer bank, VA) → LUNAS
-      status_pesanan = "selesai";
+      // Uang sudah masuk (transfer bank, VA) → Menunggu konfirmasi penjual
+      status_pesanan = "menunggu_konfirmasi";
     } else if (transaction_status === "capture" && fraud_status === "accept") {
-      // Kartu kredit / GoPay berhasil & tidak terdeteksi fraud → LUNAS
-      status_pesanan = "selesai";
+      // Kartu kredit / GoPay berhasil & tidak terdeteksi fraud → Menunggu konfirmasi penjual
+      status_pesanan = "menunggu_konfirmasi";
     } else if (transaction_status === "pending") {
       // Menunggu pembayaran (VA belum ditransfer, dsb)
       status_pesanan = "menunggu_pembayaran";
