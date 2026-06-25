@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([
+  const [products] = useState([
     {
       id: "P001",
       name: "Paket Nasi Ayam Geprek Level 3",

@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
   const page = Math.max(1, parseInt(searchParams.get("page") ?? "1", 10));
   const limit = Math.min(
     50,
-    parseInt(searchParams.get("limit") ?? String(DEFAULT_PAGE_SIZE), 10)
+    parseInt(searchParams.get("limit") ?? String(DEFAULT_PAGE_SIZE), 10),
   );
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -65,7 +65,10 @@ export async function GET(request: NextRequest) {
 
     // ── Metode jualan filter ────────────────────────────────────────────────
     if (metodeParam.trim()) {
-      const metodeList = metodeParam.split(",").map((m) => m.trim()).filter(Boolean);
+      const metodeList = metodeParam
+        .split(",")
+        .map((m) => m.trim())
+        .filter(Boolean);
 
       if (metodeList.length > 0) {
         if (metodeList.length === 1) {
@@ -110,6 +113,9 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ products: data ?? [], hasMore, total, page });
   } catch (err) {
     console.error("[API - Products] Unexpected error:", err);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 },
+    );
   }
 }

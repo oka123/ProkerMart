@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import crypto from "crypto";
@@ -5,7 +6,7 @@ import crypto from "crypto";
 // Inisialisasi Supabase dengan Service Role Key
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 );
 
 export async function POST(request: Request) {
@@ -36,7 +37,7 @@ export async function POST(request: Request) {
       console.warn("Signature tidak valid! Request mungkin palsu.");
       return NextResponse.json(
         { error: "Signature tidak valid" },
-        { status: 403 }
+        { status: 403 },
       );
     }
 
@@ -47,25 +48,18 @@ export async function POST(request: Request) {
     if (transaction_status === "settlement") {
       // Uang sudah masuk (transfer bank, VA) → LUNAS
       status_pesanan = "selesai";
-
-    } else if (
-      transaction_status === "capture" &&
-      fraud_status === "accept"
-    ) {
+    } else if (transaction_status === "capture" && fraud_status === "accept") {
       // Kartu kredit / GoPay berhasil & tidak terdeteksi fraud → LUNAS
       status_pesanan = "selesai";
-
     } else if (transaction_status === "pending") {
       // Menunggu pembayaran (VA belum ditransfer, dsb)
       status_pesanan = "menunggu_pembayaran";
-
     } else if (
       transaction_status === "expire" ||
       transaction_status === "expired"
     ) {
       // Waktu bayar habis
       status_pesanan = "kadaluarsa";
-
     } else if (
       transaction_status === "cancel" ||
       transaction_status === "deny"
@@ -77,24 +71,27 @@ export async function POST(request: Request) {
     // Jika status tidak dikenali, abaikan saja (tidak update DB)
     if (!status_pesanan) {
       console.log(`Status tidak ditangani: ${transaction_status}, abaikan.`);
-      return NextResponse.json({ message: "Status diabaikan" }, { status: 200 });
+      return NextResponse.json(
+        { message: "Status diabaikan" },
+        { status: 200 },
+      );
     }
 
     // ─── 3. Update status_pesanan di Supabase ────────────────────────────────
-    //        Cari pesanan berdasarkan kode_unik = order_id dari Midtrans
+    //        Cari pesanan berdasarkan kode_unik = order_id atau prefix order_id-
     const { error: dbError } = await supabase
       .from("pesanan")
       .update({
         status_pesanan: status_pesanan,
-        metode_pembayaran: payment_type
+        metode_pembayaran: payment_type,
       })
-      .eq("kode_unik", order_id);
+      .or(`kode_unik.eq.${order_id},kode_unik.like.${order_id}-%`);
 
     if (dbError) {
       console.error("Gagal update status pesanan:", dbError.message);
       return NextResponse.json(
         { error: "Gagal update database" },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
@@ -103,12 +100,11 @@ export async function POST(request: Request) {
     // ─── 4. Balas dengan 200 OK ke Midtrans ──────────────────────────────────
     //        Wajib! Jika tidak balas 200, Midtrans akan retry terus selama 24 jam
     return NextResponse.json({ message: "OK" }, { status: 200 });
-
   } catch (error: any) {
     console.error("Error di webhook Midtrans:", error.message);
     return NextResponse.json(
       { error: "Internal server error" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

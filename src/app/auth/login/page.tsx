@@ -3,13 +3,13 @@ import { Logo } from "@/components/Logo";
 
 export default function Page() {
   return (
-    <div className="min-h-screen flex">
+    <div className="flex min-h-screen">
       {/* Left decorative panel — desktop only */}
-      <div className="hidden lg:flex lg:w-1/2 bg-linear-to-br from-primary-700 via-primary-600 to-primary-800 flex-col justify-between p-12 relative overflow-hidden">
+      <div className="relative flex-col justify-between hidden p-12 overflow-hidden lg:flex lg:w-1/2 bg-linear-to-br from-primary-700 via-primary-600 to-primary-800">
         {/* Background decorative circles */}
-        <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/5 rounded-full" />
-        <div className="absolute -bottom-10 -left-10 w-60 h-60 bg-white/5 rounded-full" />
-        <div className="absolute top-1/3 right-10 w-40 h-40 bg-white/5 rounded-full" />
+        <div className="absolute rounded-full -top-20 -right-20 w-80 h-80 bg-white/5" />
+        <div className="absolute rounded-full -bottom-10 -left-10 w-60 h-60 bg-white/5" />
+        <div className="absolute w-40 h-40 rounded-full top-1/3 right-10 bg-white/5" />
 
         {/* Top branding */}
         <div className="relative z-10">
@@ -18,12 +18,12 @@ export default function Page() {
 
         {/* Center content */}
         <div className="relative z-10">
-          <h2 className="text-4xl font-bold text-white leading-tight mb-4">
+          <h2 className="mb-4 text-4xl font-bold leading-tight text-white">
             Satu Platform,
             <br />
             Seribu Produk Ormawa
           </h2>
-          <p className="text-primary-100 text-lg leading-relaxed">
+          <p className="text-lg leading-relaxed text-primary-100">
             Temukan dan beli produk menarik dari berbagai Organisasi Mahasiswa
             kampus Anda. Dukung kegiatan mereka dengan berbelanja di ProkerMart.
           </p>
@@ -37,22 +37,22 @@ export default function Page() {
             ].map((item) => (
               <div
                 key={item}
-                className="flex items-center gap-3 bg-white/10 backdrop-blur-sm rounded-xl p-3"
+                className="flex items-center gap-3 p-3 bg-white/10 backdrop-blur-sm rounded-xl"
               >
-                <p className="text-white text-sm font-medium">{item}</p>
+                <p className="text-sm font-medium text-white">{item}</p>
               </div>
             ))}
           </div>
         </div>
 
         {/* Bottom tagline */}
-        <p className="text-primary-300 text-sm relative z-10">
+        <p className="relative z-10 text-sm text-primary-300">
           © 2026 ProkerMart. Marketplace Ormawa Kampus.
         </p>
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-6 md:p-12 bg-white">
+      <div className="flex items-center justify-center flex-1 p-6 bg-white md:p-12">
         <div className="w-full max-w-md">
           <LoginForm />
         </div>

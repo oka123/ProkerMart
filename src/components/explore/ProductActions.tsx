@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   ShoppingBag,
   Package,
@@ -37,14 +38,27 @@ export function ProductActions({
   const router = useRouter();
   const [quantity, setQuantity] = useState(1);
   const [showNotification, setShowNotification] = useState(false);
-  const [notificationError, setNotificationError] = useState<string | null>(
-    null,
-  );
+  const [notificationError, setNotificationError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+
+  useEffect(() => {
+    // Check auth state on mount
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient()
+        .auth.getUser()
+        .then(({ data: { user } }) => setIsLoggedIn(!!user));
+    });
+  }, []);
 
   const totalPrice = price * quantity;
 
   const handleAddToCart = async () => {
+    if (!isLoggedIn) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     setIsAddingToCart(true);
     setNotificationError(null);
 
@@ -53,6 +67,7 @@ export function ProductActions({
     setIsAddingToCart(false);
 
     if (result.success) {
+      window.dispatchEvent(new Event("cart-updated"));
       setShowNotification(true);
       setNotificationError(null);
       setTimeout(() => setShowNotification(false), 3000);
@@ -75,6 +90,11 @@ export function ProductActions({
   };
 
   const handleCheckout = () => {
+    if (!isLoggedIn) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     // 1. Bungkus data produk persis seperti struktur tabel 'keranjang'
     const itemBeliLangsung = [
       {

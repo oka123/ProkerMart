@@ -13,11 +13,11 @@ interface ProductReviewsProps {
 
 export function ProductReviews({
   productId,
-  subTokoId,
+
   initialReviews,
 }: ProductReviewsProps) {
   const [filterRating, setFilterRating] = useState<number | null>(null);
-  
+
   const reviews = initialReviews;
 
   // Calculate average rating
@@ -27,10 +27,10 @@ export function ProductReviews({
       : 0;
 
   // Determine reviews to show
-  const filteredReviews = filterRating 
-    ? reviews.filter(r => r.rating === filterRating)
+  const filteredReviews = filterRating
+    ? reviews.filter((r) => r.rating === filterRating)
     : reviews;
-    
+
   const visibleReviews = filteredReviews.slice(0, 3);
 
   return (
@@ -78,7 +78,9 @@ export function ProductReviews({
             const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
             return (
               <div key={ratingVal} className="flex items-center gap-3 text-sm">
-                <span className="w-3 font-semibold text-slate-700">{ratingVal}</span>
+                <span className="w-3 font-semibold text-slate-700">
+                  {ratingVal}
+                </span>
                 <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                 <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
@@ -159,7 +161,7 @@ export function ProductReviews({
                 className="bg-white rounded-xl border border-slate-200 p-5 shadow-xs hover:shadow-md transition duration-200 flex gap-4"
               >
                 {/* Initials Avatar */}
-                <div className="w-10 h-10 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                <div className="w-10 h-10 rounded-full bg-linear-to-tr from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
                   {initials}
                 </div>
 

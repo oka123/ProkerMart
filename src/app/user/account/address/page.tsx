@@ -1,21 +1,14 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
-import {
-  Plus,
-  MapPin,
-  ChevronRight,
-  Trash2,
-  MapPinned,
-  X,
-  Loader2,
-} from "lucide-react";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { Plus, MapPin, Trash2, MapPinned, X, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase/client";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "react-hot-toast";
 import dynamic from "next/dynamic";
 
@@ -40,8 +33,14 @@ interface Address {
   longitude: number | null;
 }
 
-export default function AddressPage() {
+import { Suspense } from "react";
+
+function AddressPageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const actionParam = searchParams.get("action");
+  const idParam = searchParams.get("id");
+  const returnUrl = searchParams.get("return_url");
   const supabase = createClient();
 
   const [isLoading, setIsLoading] = useState(true);
@@ -53,6 +52,7 @@ export default function AddressPage() {
   const [editingAddress, setEditingAddress] = useState<Address | null>(null);
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const hasHandledQuery = useRef(false);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -70,21 +70,24 @@ export default function AddressPage() {
     longitude: 115.1765,
   });
 
-  const fetchAddresses = async (uid: string) => {
-    try {
-      const { data, error } = await supabase
-        .from("alamat_pembeli")
-        .select("*")
-        .eq("id_pengguna", uid)
-        .order("is_utama", { ascending: false })
-        .order("tgl_dibuat", { ascending: false });
+  const fetchAddresses = useCallback(
+    async (uid: string) => {
+      try {
+        const { data, error } = await supabase
+          .from("alamat_pembeli")
+          .select("*")
+          .eq("id_pengguna", uid)
+          .order("is_utama", { ascending: false })
+          .order("tgl_dibuat", { ascending: false });
 
-      if (error) throw error;
-      setAddresses(data || []);
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-    }
-  };
+        if (error) throw error;
+        setAddresses(data || []);
+      } catch (error) {
+        console.error("Error fetching addresses:", error);
+      }
+    },
+    [supabase],
+  );
 
   useEffect(() => {
     async function init() {
@@ -100,48 +103,68 @@ export default function AddressPage() {
       setIsLoading(false);
     }
     init();
-  }, [router, supabase]);
+  }, [router, supabase, fetchAddresses]);
 
-  const handleOpenModal = (address: Address | null = null) => {
-    setEditingAddress(address);
-    if (address) {
-      setFormData({
-        nama_penerima: address.nama_penerima,
-        no_telepon: address.no_telepon,
-        provinsi: address.provinsi,
-        kota: address.kota,
-        kecamatan: address.kecamatan,
-        kode_pos: address.kode_pos,
-        detail_jalan: address.detail_jalan,
-        catatan_tambahan: address.catatan_tambahan || "",
-        tipe_alamat: address.tipe_alamat || "Rumah",
-        is_utama: address.is_utama,
-        latitude: address.latitude || -8.7963,
-        longitude: address.longitude || 115.1765,
-      });
-    } else {
-      setFormData({
-        nama_penerima: "",
-        no_telepon: "",
-        provinsi: "",
-        kota: "",
-        kecamatan: "",
-        kode_pos: "",
-        detail_jalan: "",
-        catatan_tambahan: "",
-        tipe_alamat: "Rumah",
-        is_utama: addresses.length === 0, // First address is automatically main
-        latitude: -8.7963,
-        longitude: 115.1765,
-      });
-    }
-    setIsModalOpen(true);
-  };
+  const handleOpenModal = useCallback(
+    (address: Address | null = null) => {
+      setEditingAddress(address);
+      if (address) {
+        setFormData({
+          nama_penerima: address.nama_penerima,
+          no_telepon: address.no_telepon,
+          provinsi: address.provinsi,
+          kota: address.kota,
+          kecamatan: address.kecamatan,
+          kode_pos: address.kode_pos,
+          detail_jalan: address.detail_jalan,
+          catatan_tambahan: address.catatan_tambahan || "",
+          tipe_alamat: address.tipe_alamat || "Rumah",
+          is_utama: address.is_utama,
+          latitude: address.latitude || -8.7963,
+          longitude: address.longitude || 115.1765,
+        });
+      } else {
+        setFormData({
+          nama_penerima: "",
+          no_telepon: "",
+          provinsi: "",
+          kota: "",
+          kecamatan: "",
+          kode_pos: "",
+          detail_jalan: "",
+          catatan_tambahan: "",
+          tipe_alamat: "Rumah",
+          is_utama: addresses.length === 0, // First address is automatically main
+          latitude: -8.7963,
+          longitude: 115.1765,
+        });
+      }
+      setIsModalOpen(true);
+    },
+    [addresses.length],
+  );
 
   const handleCloseModal = () => {
     setEditingAddress(null);
     setIsModalOpen(false);
+    if (returnUrl) {
+      router.push(returnUrl);
+    }
   };
+
+  useEffect(() => {
+    if (!isLoading && !hasHandledQuery.current && addresses.length >= 0) {
+      if (actionParam === "add") {
+        setTimeout(() => handleOpenModal(), 0);
+      } else if (actionParam === "edit" && idParam) {
+        const addrToEdit = addresses.find((a) => a.id_alamat === idParam);
+        if (addrToEdit) {
+          setTimeout(() => handleOpenModal(addrToEdit), 0);
+        }
+      }
+      hasHandledQuery.current = true;
+    }
+  }, [isLoading, actionParam, idParam, addresses, handleOpenModal]);
 
   const handleSaveAddress = async () => {
     if (
@@ -210,7 +233,7 @@ export default function AddressPage() {
         if (error) throw error;
         toast.success("Alamat berhasil dihapus");
         await fetchAddresses(userId);
-      } catch (error: any) {
+      } catch {
         toast.error("Gagal menghapus alamat");
       } finally {
         setIsDeleteModalOpen(false);
@@ -237,7 +260,7 @@ export default function AddressPage() {
       if (error) throw error;
       toast.success("Alamat utama diperbarui");
       await fetchAddresses(userId);
-    } catch (error) {
+    } catch {
       toast.error("Gagal mengatur alamat utama");
     }
   };
@@ -256,7 +279,7 @@ export default function AddressPage() {
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="lg:flex lg:gap-6">
           <aside className="hidden lg:block shrink-0">
             <UserSidebar />
@@ -270,13 +293,13 @@ export default function AddressPage() {
             />
 
             <div className="bg-white lg:rounded-sm lg:shadow-sm min-h-112.5 flex flex-col">
-              <div className="hidden lg:flex items-center justify-between p-6 border-b border-slate-100">
+              <div className="items-center justify-between hidden p-6 border-b lg:flex border-slate-100">
                 <h2 className="text-lg font-medium text-slate-900">
                   Alamat Saya
                 </h2>
                 <button
                   onClick={() => handleOpenModal()}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary-600 text-white rounded-sm hover:bg-primary-700 transition-colors shadow-sm"
+                  className="flex items-center gap-2 px-4 py-2 text-white transition-colors rounded-sm shadow-sm bg-primary-600 hover:bg-primary-700"
                 >
                   <Plus className="w-5 h-5" />
                   <span>Tambahkan Alamat Baru</span>
@@ -284,8 +307,8 @@ export default function AddressPage() {
               </div>
 
               <div className="flex-1">
-                <div className="px-4 lg:px-6 py-2 border-b border-slate-50 lg:hidden">
-                  <span className="text-sm text-slate-400 font-medium">
+                <div className="px-4 py-2 border-b lg:px-6 border-slate-50 lg:hidden">
+                  <span className="text-sm font-medium text-slate-400">
                     Alamat
                   </span>
                 </div>
@@ -294,15 +317,15 @@ export default function AddressPage() {
                   addresses.map((address) => (
                     <div
                       key={address.id_alamat}
-                      className="p-4 lg:p-6 border-b border-slate-100 last:border-none hover:bg-slate-50/30 transition-colors"
+                      className="p-4 transition-colors border-b lg:p-6 border-slate-100 last:border-none hover:bg-slate-50/30"
                     >
-                      <div className="flex flex-col lg:flex-row lg:justify-between lg:items-start gap-4">
+                      <div className="flex flex-col gap-4 lg:flex-row lg:justify-between lg:items-start">
                         <div className="flex-1 space-y-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-semibold text-slate-900 border-r pr-2 border-slate-200">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="pr-2 font-semibold border-r text-slate-900 border-slate-200">
                               {address.nama_penerima}
                             </span>
-                            <span className="text-slate-500 text-sm">
+                            <span className="text-sm text-slate-500">
                               {address.no_telepon}
                             </span>
                             {address.is_utama && (
@@ -312,7 +335,7 @@ export default function AddressPage() {
                             )}
                           </div>
 
-                          <div className="text-sm text-slate-500 leading-relaxed max-w-2xl">
+                          <div className="max-w-2xl text-sm leading-relaxed text-slate-500">
                             <p>{address.detail_jalan}</p>
                             <p>
                               {address.kecamatan}, {address.kota},{" "}
@@ -320,7 +343,7 @@ export default function AddressPage() {
                             </p>
                           </div>
 
-                          <div className="lg:hidden mt-2">
+                          <div className="mt-2 lg:hidden">
                             <span className="px-2 py-0.5 bg-slate-100 text-slate-500 text-xs rounded-sm">
                               {address.tipe_alamat}
                             </span>
@@ -373,7 +396,7 @@ export default function AddressPage() {
             <div className="lg:hidden p-4 sticky bottom-0 bg-[#f5f5f5]">
               <button
                 onClick={() => handleOpenModal()}
-                className="w-full flex items-center justify-center gap-2 py-3 border border-primary-600 text-primary-600 font-medium rounded-sm bg-white hover:bg-primary-50 transition-all"
+                className="flex items-center justify-center w-full gap-2 py-3 font-medium transition-all bg-white border rounded-sm border-primary-600 text-primary-600 hover:bg-primary-50"
               >
                 <Plus className="w-5 h-5" />
                 <span>Tambah Alamat Baru</span>
@@ -386,7 +409,7 @@ export default function AddressPage() {
       {/* Address Form Modal */}
       <AnimatePresence>
         {isModalOpen && (
-          <div className="fixed inset-0 z-100 flex items-center justify-center p-0 lg:p-4">
+          <div className="fixed inset-0 flex items-center justify-center p-0 z-100 lg:p-4">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -412,9 +435,9 @@ export default function AddressPage() {
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto overscroll-none p-4 lg:p-6 space-y-6">
+              <div className="flex-1 p-4 space-y-6 overflow-y-auto overscroll-none lg:p-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <input
                       type="text"
                       placeholder="Nama Penerima"
@@ -425,7 +448,7 @@ export default function AddressPage() {
                           nama_penerima: e.target.value,
                         })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                     <input
                       type="text"
@@ -434,7 +457,7 @@ export default function AddressPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, no_telepon: e.target.value })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                   </div>
 
@@ -446,7 +469,7 @@ export default function AddressPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, provinsi: e.target.value })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                     <input
                       type="text"
@@ -455,7 +478,7 @@ export default function AddressPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, kota: e.target.value })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                     <input
                       type="text"
@@ -464,7 +487,7 @@ export default function AddressPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, kecamatan: e.target.value })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                     <input
                       type="text"
@@ -473,7 +496,7 @@ export default function AddressPage() {
                       onChange={(e) =>
                         setFormData({ ...formData, kode_pos: e.target.value })
                       }
-                      className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                      className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                     />
                   </div>
 
@@ -484,7 +507,7 @@ export default function AddressPage() {
                     onChange={(e) =>
                       setFormData({ ...formData, detail_jalan: e.target.value })
                     }
-                    className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 resize-none"
+                    className="w-full px-3 py-3 text-sm border rounded-sm resize-none border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                   />
 
                   <input
@@ -497,10 +520,10 @@ export default function AddressPage() {
                         catatan_tambahan: e.target.value,
                       })
                     }
-                    className="w-full border border-slate-200 rounded-sm px-3 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600"
+                    className="w-full px-3 py-3 text-sm border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                   />
 
-                  <div className="space-y-3 pt-4 border-t border-slate-50">
+                  <div className="pt-4 space-y-3 border-t border-slate-50">
                     <div className="flex items-center justify-between">
                       <span className="text-sm font-medium text-slate-700">
                         Titik Koordinat Lokasi
@@ -525,13 +548,13 @@ export default function AddressPage() {
                             );
                           }
                         }}
-                        className="text-xs text-primary-600 font-medium flex items-center gap-1 hover:underline cursor-pointer"
+                        className="flex items-center gap-1 text-xs font-medium cursor-pointer text-primary-600 hover:underline"
                       >
                         <MapPin className="w-3 h-3" />
                         Gunakan Lokasi Saat Ini
                       </button>
                     </div>
-                    <div className="w-full h-48 bg-slate-100 rounded-sm overflow-hidden z-0">
+                    <div className="z-0 w-full h-48 overflow-hidden rounded-sm bg-slate-100">
                       <LocationPickerMap
                         initialLocation={{
                           lat: formData.latitude,
@@ -553,7 +576,7 @@ export default function AddressPage() {
                   </div>
                 </div>
 
-                <div className="space-y-4 pt-4 border-t border-slate-50">
+                <div className="pt-4 space-y-4 border-t border-slate-50">
                   <div className="flex items-center justify-between">
                     <span className="text-sm text-slate-600">
                       Atur sebagai Alamat Utama
@@ -598,17 +621,17 @@ export default function AddressPage() {
                 </div>
               </div>
 
-              <div className="p-4 border-t border-slate-100 flex gap-3 lg:justify-end">
+              <div className="flex gap-3 p-4 border-t border-slate-100 lg:justify-end">
                 <button
                   onClick={handleCloseModal}
-                  className="flex-1 lg:flex-none px-8 py-2 border border-slate-200 text-slate-600 rounded-sm hover:bg-slate-50 transition-all"
+                  className="flex-1 px-8 py-2 transition-all border rounded-sm lg:flex-none border-slate-200 text-slate-600 hover:bg-slate-50"
                 >
                   Batal
                 </button>
                 <button
                   onClick={handleSaveAddress}
                   disabled={isSaving}
-                  className="flex-1 lg:flex-none px-12 py-2 bg-primary-600 text-white rounded-sm hover:bg-primary-700 shadow-md transition-all font-medium disabled:opacity-50 flex items-center justify-center gap-2"
+                  className="flex items-center justify-center flex-1 gap-2 px-12 py-2 font-medium text-white transition-all rounded-sm shadow-md lg:flex-none bg-primary-600 hover:bg-primary-700 disabled:opacity-50"
                 >
                   {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
                   Simpan
@@ -622,7 +645,7 @@ export default function AddressPage() {
       {/* Delete Confirmation Modal */}
       <AnimatePresence>
         {isDeleteModalOpen && (
-          <div className="fixed inset-0 z-110 flex items-center justify-center p-4">
+          <div className="fixed inset-0 flex items-center justify-center p-4 z-110">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -634,15 +657,15 @@ export default function AddressPage() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="relative bg-white p-6 rounded-md shadow-2xl max-w-sm w-full text-center"
+              className="relative w-full max-w-sm p-6 text-center bg-white rounded-md shadow-2xl"
             >
-              <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+              <div className="flex items-center justify-center w-16 h-16 mx-auto mb-4 rounded-full bg-red-50">
                 <Trash2 className="w-8 h-8 text-red-500" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+              <h3 className="mb-2 text-lg font-semibold text-slate-900">
                 Hapus Alamat?
               </h3>
-              <p className="text-sm text-slate-500 mb-6">
+              <p className="mb-6 text-sm text-slate-500">
                 Apakah Anda yakin ingin menghapus alamat ini? Tindakan ini tidak
                 dapat dibatalkan.
               </p>
@@ -665,5 +688,19 @@ export default function AddressPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+export default function AddressPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
+          <Loader2 className="w-10 h-10 text-primary-600 animate-spin" />
+        </div>
+      }
+    >
+      <AddressPageContent />
+    </Suspense>
   );
 }

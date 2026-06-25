@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useCallback } from "react";
 import { motion } from "framer-motion";
 import {
   ChevronLeft,
@@ -9,9 +10,6 @@ import {
   Receipt,
   Clock,
   Info,
-  ShieldCheck,
-  Copy,
-  CheckCircle2,
   Package,
   Truck,
   Star,
@@ -25,6 +23,7 @@ import { UserSidebar } from "@/components/user/UserSidebar";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
+import Script from "next/script";
 
 interface OrderDetail {
   id_pesanan: string;
@@ -48,6 +47,10 @@ interface OrderDetail {
     variation: string;
     quantity: number;
     price: number;
+    metode_pengambilan: string;
+    tgl_ambil: string | null;
+    alamat_pengambilan: string | null;
+    subToko?: any;
   }>;
   payment: {
     method: string;
@@ -61,6 +64,7 @@ interface OrderDetail {
     rating: number;
     komentar: string | null;
   } | null;
+  snap_token?: string | null;
 }
 
 const mapStatusToStepIndex = (status: string) => {
@@ -88,7 +92,7 @@ export default function OrderDetailPage() {
     <Suspense
       fallback={
         <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-primary-600"></div>
         </div>
       }
     >
@@ -113,7 +117,7 @@ function OrderDetailContent() {
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [isReadOnlyRating, setIsReadOnlyRating] = useState(false);
 
-  async function fetchOrderDetail() {
+  const fetchOrderDetail = useCallback(async () => {
     try {
       const {
         data: { user },
@@ -123,7 +127,19 @@ function OrderDetailContent() {
         return;
       }
 
-      const { data: pesanan, error } = await supabase
+      const getBaseId = (kode: string) => {
+        const lastHyphenIndex = kode.lastIndexOf("-");
+        if (lastHyphenIndex !== -1) {
+          const suffix = kode.substring(lastHyphenIndex + 1);
+          if (!isNaN(Number(suffix))) {
+            return kode.substring(0, lastHyphenIndex);
+          }
+        }
+        return kode;
+      };
+      const baseId = getBaseId(id);
+
+      const { data: pesananList, error } = await supabase
         .from("pesanan")
         .select(
           `
@@ -133,9 +149,8 @@ function OrderDetailContent() {
           status_pesanan,
           metode_pembayaran,
           tgl_pesan,
-          tgl_ambil,
           alamat_pengambilan,
-          metode_pengambilan,
+          snap_token,
           id_sub_toko,
           sub_toko (
             id_toko,
@@ -151,23 +166,46 @@ function OrderDetailContent() {
             id_detail,
             jumlah,
             harga_satuan,
+            metode_pengambilan,
+            tgl_ambil,
             produk (
               id_produk,
               nama_produk,
               foto,
-              kategori
+              kategori,
+              sub_toko (
+                id_sub_toko,
+                nama_proker,
+                alamat
+              )
             )
           )
         `,
         )
-        .eq("kode_unik", id)
-        .eq("id_pengguna", user.id)
-        .single();
+        .or(`kode_unik.eq.${baseId},kode_unik.like.${baseId}-%`)
+        .eq("id_pengguna", user.id);
 
-      if (error || !pesanan) {
+      if (error || !pesananList || pesananList.length === 0) {
         console.error("Order not found", error);
         router.push("/user/purchase");
         return;
+      }
+
+      // Check if any sibling order is unpaid
+      const isUnpaid = pesananList.some(
+        (p: any) => p.status_pesanan === "menunggu_pembayaran",
+      );
+
+      let pesanan: any;
+      let siblingOrders: any[] = [];
+
+      if (isUnpaid) {
+        pesanan = pesananList[0];
+        siblingOrders = pesananList.slice(1);
+      } else {
+        // Paid: show exact match from URL id, default to first item
+        const exactMatch = pesananList.find((p: any) => p.kode_unik === id);
+        pesanan = exactMatch || pesananList[0];
       }
 
       const subTokoObj = Array.isArray(pesanan.sub_toko)
@@ -176,40 +214,76 @@ function OrderDetailContent() {
       const storeName = subTokoObj?.nama_proker || "Toko";
       const tokoId = subTokoObj?.id_toko || "";
 
-      // Dummy calculations for UI completeness based on screenshots
-      const itemsTotal = pesanan.detail_pesanan.reduce(
-        (sum: number, dp: any) => sum + dp.jumlah * dp.harga_satuan,
-        0,
+      const allDetailPesanan = [...pesanan.detail_pesanan];
+      let total_harga = Number(pesanan.total_harga);
+
+      if (isUnpaid) {
+        siblingOrders.forEach((sibling: any) => {
+          allDetailPesanan.push(...sibling.detail_pesanan);
+          total_harga += Number(sibling.total_harga);
+        });
+      }
+
+      const hasDeliveryItem = allDetailPesanan.some(
+        (dp: any) => dp.metode_pengambilan === "delivery",
       );
-      const shippingFee = pesanan.metode_pengambilan === "pickup" ? 0 : 12000;
+      const hasPickupItem = allDetailPesanan.some(
+        (dp: any) => dp.metode_pengambilan === "pickup",
+      );
+
+      let metodePengambilan = "pickup";
+      if (hasDeliveryItem && hasPickupItem) {
+        metodePengambilan = "both";
+      } else if (hasDeliveryItem) {
+        metodePengambilan = "delivery";
+      }
+
+      const shippingFee = hasDeliveryItem ? 12000 : 0;
       const serviceFee = 1000;
-      const discount = pesanan.metode_pengambilan === "pickup" ? 0 : -12000;
+      const discount = hasDeliveryItem ? -12000 : 0;
 
       const formattedOrder: OrderDetail = {
         id_pesanan: pesanan.id_pesanan,
         isRated: pesanan.ulasan && pesanan.ulasan.length > 0,
         id: pesanan.kode_unik,
-        kode_unik: pesanan.kode_unik,
-        total_harga: pesanan.total_harga, // Should equal itemsTotal + shippingFee + serviceFee + discount
+        kode_unik: isUnpaid ? baseId : pesanan.kode_unik,
+        total_harga: total_harga,
         status_pesanan: pesanan.status_pesanan,
         tgl_pesan: pesanan.tgl_pesan,
-        tgl_ambil: pesanan.tgl_ambil,
+        tgl_ambil: null,
         alamat_pengambilan:
           pesanan.alamat_pengambilan || "Alamat tidak tersedia",
-        metode_pengambilan: pesanan.metode_pengambilan,
-        storeName: storeName,
+        metode_pengambilan: metodePengambilan,
+        storeName:
+          isUnpaid && pesananList.length > 1
+            ? `${storeName} + ${pesananList.length - 1} Toko Lain`
+            : storeName,
         storeId: pesanan.id_sub_toko,
         tokoId: tokoId,
-        items: pesanan.detail_pesanan.map((dp: any) => ({
-          id: dp.id_detail,
-          id_produk: dp.produk.id_produk,
-          name: dp.produk?.nama_produk || "Produk",
-          image:
-            dp.produk?.foto || "https://placehold.co/100x100?text=No+Image",
-          variation: dp.produk?.kategori || "Umum",
-          quantity: dp.jumlah,
-          price: dp.harga_satuan,
-        })),
+        snap_token: pesanan.snap_token,
+
+        items: allDetailPesanan.map((dp: any) => {
+          const prodSubToko = dp.produk?.sub_toko;
+          const standAddress =
+            prodSubToko?.alamat ||
+            `Stand ${prodSubToko?.nama_proker || "Toko"}, Gedung A Lt.1`;
+
+          return {
+            id: dp.id_detail,
+            id_produk: dp.produk.id_produk,
+            name: dp.produk?.nama_produk || "Produk",
+            image:
+              dp.produk?.foto || "https://placehold.co/100x100?text=No+Image",
+            variation: dp.produk?.kategori || "Umum",
+            quantity: dp.jumlah,
+            price: dp.harga_satuan,
+            metode_pengambilan: dp.metode_pengambilan || "pickup",
+            tgl_ambil: dp.tgl_ambil || null,
+            alamat_pengambilan:
+              dp.metode_pengambilan === "pickup" ? standAddress : null,
+            subToko: prodSubToko,
+          };
+        }),
         payment: pesanan.metode_pembayaran
           ? {
               method: pesanan.metode_pembayaran,
@@ -217,7 +291,7 @@ function OrderDetailContent() {
                 pesanan.status_pesanan === "menunggu_pembayaran"
                   ? "menunggu"
                   : "dibayar",
-              date: null, // tgl_bayar tidak diambil lagi dari tabel pembayaran
+              date: null,
             }
           : null,
         shippingFee,
@@ -239,30 +313,33 @@ function OrderDetailContent() {
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [id, router, supabase]);
 
   useEffect(() => {
     if (id) {
-      fetchOrderDetail();
+      queueMicrotask(() => {
+        fetchOrderDetail();
+      });
     }
-  }, [id, router, supabase]);
+  }, [id, fetchOrderDetail]);
 
   const handleCancelOrder = async () => {
     if (!order) return;
     if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
     try {
       setIsLoading(true);
-      const { error } = await supabase
-        .from("pesanan")
-        .update({ status_pesanan: "dibatalkan" })
-        .eq("id_pesanan", order.id_pesanan);
-
-      if (error) throw error;
+      const res = await fetch("/api/orders/cancel", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ kode_unik: order.kode_unik }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Gagal membatalkan pesanan.");
       alert("Pesanan berhasil dibatalkan.");
       await fetchOrderDetail();
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error cancelling order:", err);
-      alert("Gagal membatalkan pesanan. Silakan coba lagi.");
+      alert(err.message || "Gagal membatalkan pesanan. Silakan coba lagi.");
     } finally {
       setIsLoading(false);
     }
@@ -294,7 +371,36 @@ function OrderDetailContent() {
     }
   };
 
-  const handleBuyAgain = async (items: Array<{ id_produk: string; quantity: number }>) => {
+  const handlePayNow = (token?: string | null) => {
+    if (!token) {
+      alert("Token pembayaran tidak ditemukan. Silakan hubungi admin.");
+      return;
+    }
+    if ((window as any).snap) {
+      (window as any).snap.pay(token, {
+        onSuccess: function () {
+          alert("Pembayaran berhasil!");
+          fetchOrderDetail();
+        },
+        onPending: function () {
+          alert("Menunggu pembayaran Anda!");
+          fetchOrderDetail();
+        },
+        onError: function () {
+          alert("Pembayaran gagal!");
+        },
+        onClose: function () {
+          console.log("Pop-up pembayaran ditutup.");
+        },
+      });
+    } else {
+      alert("Sistem pembayaran belum siap. Silakan refresh halaman.");
+    }
+  };
+
+  const handleBuyAgain = async (
+    items: Array<{ id_produk: string; quantity: number }>,
+  ) => {
     try {
       setIsLoading(true);
       const {
@@ -433,14 +539,16 @@ function OrderDetailContent() {
     alert("Disalin ke clipboard!");
   };
 
-  const handleOpenChat = () => {
+  const handleOpenChat = (storeId?: string, storeName?: string) => {
     if (!order) return;
+    const activeStoreId = storeId || order.storeId;
+    const activeStoreName = storeName || order.storeName;
     const event = new CustomEvent("openProkerChat", {
       detail: {
-        id_sub_toko: order.storeId,
-        name: order.storeName,
+        id_sub_toko: activeStoreId,
+        name: activeStoreName,
         type: "toko",
-        avatar: `https://placehold.co/100x100?text=${encodeURIComponent(order.storeName.charAt(0))}`,
+        avatar: `https://placehold.co/100x100?text=${encodeURIComponent(activeStoreName.charAt(0))}`,
       },
     });
     window.dispatchEvent(event);
@@ -449,7 +557,7 @@ function OrderDetailContent() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+        <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-primary-600"></div>
       </div>
     );
   }
@@ -461,33 +569,38 @@ function OrderDetailContent() {
 
   return (
     <div className="min-h-screen bg-[#f5f5f5] flex flex-col font-sans text-slate-800 pb-20 md:pb-0">
+      <Script
+        src="https://app.sandbox.midtrans.com/snap/snap.js"
+        data-client-key={process.env.NEXT_PUBLIC_MIDTRANS_CLIENT_KEY}
+        strategy="lazyOnload"
+      />
       <div className="hidden lg:block">
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="flex gap-6">
           <aside className="hidden lg:block shrink-0">
             <UserSidebar />
           </aside>
 
-          <div className="relative flex-1 min-w-0 flex flex-col gap-3 md:gap-4">
+          <div className="relative flex flex-col flex-1 min-w-0 gap-3 md:gap-4">
             {/* Mobile Header */}
-            <div className="lg:hidden bg-white px-4 py-3 sticky top-0 z-40 shadow-sm flex items-center gap-3">
+            <div className="sticky top-0 z-40 flex items-center gap-3 px-4 py-3 bg-white shadow-sm lg:hidden">
               <button
                 onClick={() => router.back()}
-                className="p-1 hover:bg-slate-100 rounded-full"
+                className="p-1 rounded-full hover:bg-slate-100"
               >
                 <ChevronLeft className="w-6 h-6 text-slate-600" />
               </button>
-              <h1 className="font-semibold text-lg flex-1">Rincian Pesanan</h1>
+              <h1 className="flex-1 text-lg font-semibold">Rincian Pesanan</h1>
             </div>
 
             {/* Desktop Header */}
-            <div className="hidden lg:flex items-center justify-between bg-white p-4 md:rounded-sm shadow-sm">
+            <div className="items-center justify-between hidden p-4 bg-white shadow-sm lg:flex md:rounded-sm">
               <button
                 onClick={() => router.back()}
-                className="flex items-center gap-2 text-slate-600 hover:text-primary-600 font-medium"
+                className="flex items-center gap-2 font-medium text-slate-600 hover:text-primary-600"
               >
                 <ChevronLeft className="w-5 h-5" /> KEMBALI
               </button>
@@ -496,20 +609,22 @@ function OrderDetailContent() {
                   NO. PESANAN. {order.kode_unik}
                 </span>
                 <span className="text-slate-300">|</span>
-                <span className="text-primary-600 uppercase">
-                  {order.status_pesanan.replace(/_/g, " ")}
+                <span className="uppercase text-primary-600">
+                  {order.metode_pengambilan === "both" && (order.status_pesanan === "siap_diambil" || order.status_pesanan === "dikirim")
+                    ? "DIKIRIM / SIAP DIAMBIL"
+                    : order.status_pesanan.replace(/_/g, " ")}
                 </span>
               </div>
             </div>
 
             {/* Stepper Status (Desktop & Mobile combined layout) */}
             {!isCanceled && (
-              <div className="bg-white p-6 md:rounded-sm shadow-sm overflow-x-auto">
+              <div className="p-6 overflow-x-auto bg-white shadow-sm md:rounded-sm">
                 <div className="min-w-150 md:min-w-0">
-                  <div className="flex items-start justify-between relative px-4">
-                    <div className="absolute left-8 right-8 top-6 h-1 bg-slate-200 -z-10 rounded-full overflow-hidden">
+                  <div className="relative flex items-start justify-between px-4">
+                    <div className="absolute h-1 overflow-hidden rounded-full left-8 right-8 top-6 bg-slate-200 -z-10">
                       <div
-                        className="h-full bg-primary-600 transition-all duration-500"
+                        className="h-full transition-all duration-500 bg-primary-600"
                         style={{ width: `${(currentStep / 4) * 100}%` }}
                       ></div>
                     </div>
@@ -536,14 +651,16 @@ function OrderDetailContent() {
                         label:
                           order.metode_pengambilan === "pickup"
                             ? "Siap Diambil"
-                            : "Dikirim",
+                            : order.metode_pengambilan === "delivery"
+                              ? "Dikirim"
+                              : "Dikirim/Siap Diambil",
                         time: "",
                       },
                       { icon: Star, label: "Belum Dinilai", time: "" },
                     ].map((step, idx) => (
                       <div
                         key={idx}
-                        className="flex flex-col items-center gap-2 w-24 text-center"
+                        className="flex flex-col items-center w-24 gap-2 text-center"
                       >
                         <div
                           className={`w-12 h-12 rounded-full flex items-center justify-center border-4 ${idx <= currentStep ? "bg-primary-50 border-primary-600 text-primary-600" : "bg-white border-slate-200 text-slate-300"} transition-colors duration-500`}
@@ -571,11 +688,11 @@ function OrderDetailContent() {
 
             {/* Mobile Status Banner if pending payment */}
             {order.status_pesanan === "menunggu_pembayaran" && (
-              <div className="lg:hidden bg-emerald-600 text-white p-4">
-                <div className="flex justify-between items-center">
+              <div className="p-4 text-white lg:hidden bg-emerald-600">
+                <div className="flex items-center justify-between">
                   <div>
-                    <h2 className="font-bold text-lg">Menunggu Pembayaran</h2>
-                    <p className="text-sm opacity-90 mt-1">
+                    <h2 className="text-lg font-bold">Menunggu Pembayaran</h2>
+                    <p className="mt-1 text-sm opacity-90">
                       Lakukan pembayaran sebelum batas waktu berakhir.
                     </p>
                   </div>
@@ -585,118 +702,171 @@ function OrderDetailContent() {
             )}
 
             {/* Address Section */}
-            <div className="bg-white md:rounded-sm shadow-sm relative border-t-2 border-primary-600">
-              <div className="absolute top-0 left-0 w-full h-1 opacity-60"></div>
+            {order.metode_pengambilan !== "pickup" && (
+              <div className="relative bg-white border-t-2 shadow-sm md:rounded-sm border-primary-600">
+                <div className="absolute top-0 left-0 w-full h-1 opacity-60"></div>
 
-              <div className="p-4 md:p-6 flex flex-col md:flex-row md:items-start gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-3 text-lg text-slate-800 font-medium">
-                    <MapPin className="w-5 h-5" />
-                    <h3>Alamat Pengiriman</h3>
+                <div className="flex flex-col gap-4 p-4 md:p-6 md:flex-row md:items-start">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-3 text-lg font-medium text-slate-800">
+                      <MapPin className="w-5 h-5" />
+                      <h3>Alamat Pengiriman</h3>
+                    </div>
+                    <div className="space-y-1 text-sm text-slate-600 pl-7">
+                      {/* <p className="font-bold text-slate-800">
+                        {order.alamat_pengambilan?.split(",")[0] || "Oka"}
+                      </p> */}
+                      <p>{order.alamat_pengambilan}</p>
+                    </div>
                   </div>
-                  <div className="text-sm text-slate-600 pl-7 space-y-1">
-                    {/* <p className="font-bold text-slate-800">
-                      {order.alamat_pengambilan?.split(",")[0] || "Oka"}
-                    </p> */}
-                    <p>{order.alamat_pengambilan}</p>
-                  </div>
+
+                  {/* Logic: "ketika status pesanan dikirim atau siap diambil hanya tampilkan alamat saja tanpa pelacakan pesanan" */}
+                  {/* {(order.status_pesanan === "dikirim" ||
+                    order.status_pesanan === "siap_diambil") && (
+                    <div className="pt-4 text-sm border-t md:w-1/3 md:border-t-0 md:border-l border-slate-100 md:pt-0 md:pl-6">
+                      <p className="mb-1 font-bold text-emerald-600">
+                        Pesanan Dalam Pengiriman
+                      </p>
+                      <p className="text-slate-500">
+                        Pelacakan logistik tidak tersedia untuk metode ini.
+                        Silakan hubungi penjual jika pesanan belum tiba.
+                      </p>
+                    </div>
+                  )} */}
                 </div>
-
-                {/* Logic: "ketika status pesanan dikirim atau siap diambil hanya tampilkan alamat saja tanpa pelacakan pesanan" */}
-                {/* {(order.status_pesanan === "dikirim" ||
-                  order.status_pesanan === "siap_diambil") && (
-                  <div className="md:w-1/3 border-t md:border-t-0 md:border-l border-slate-100 pt-4 md:pt-0 md:pl-6 text-sm">
-                    <p className="font-bold text-emerald-600 mb-1">
-                      Pesanan Dalam Pengiriman
-                    </p>
-                    <p className="text-slate-500">
-                      Pelacakan logistik tidak tersedia untuk metode ini.
-                      Silakan hubungi penjual jika pesanan belum tiba.
-                    </p>
-                  </div>
-                )} */}
               </div>
-            </div>
+            )}
 
             {/* Order Items Section */}
-            <div className="bg-white md:rounded-sm shadow-sm overflow-hidden">
-              <div className="p-4 border-b border-slate-100 flex items-center justify-between">
+            <div className="overflow-hidden bg-white shadow-sm md:rounded-sm">
+              {/* Group items by sub-toko */}
+              {Object.values(
+                order.items.reduce(
+                  (
+                    acc: Record<string, { subToko: any; items: any[] }>,
+                    item,
+                  ) => {
+                    const subTokoId =
+                      item.subToko?.id_sub_toko || order.storeId;
+                    if (!acc[subTokoId]) {
+                      acc[subTokoId] = {
+                        subToko: item.subToko || {
+                          id_sub_toko: order.storeId,
+                          nama_proker: order.storeName,
+                          id_toko: order.tokoId,
+                        },
+                        items: [],
+                      };
+                    }
+                    acc[subTokoId].items.push(item);
+                    return acc;
+                  },
+                  {},
+                ),
+              ).map((group: any) => (
                 <div
-                  className="flex items-center gap-2 font-bold text-sm text-slate-800 cursor-pointer"
-                  onClick={() =>
-                    router.push(
-                      `/organizations/${order.tokoId}/${order.storeId}`,
-                    )
-                  }
+                  key={group.subToko.id_sub_toko}
+                  className="border-b last:border-b-0 border-slate-100"
                 >
-                  <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded">
-                    Star+
-                  </span>
-                  {order.storeName}
-                  <ChevronRight className="w-4 h-4 text-slate-400" />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    onClick={handleOpenChat}
-                    className="flex items-center gap-1.5 border border-primary-600 text-primary-600 px-3 py-1 rounded text-xs font-medium hover:bg-primary-50"
-                  >
-                    Chat
-                  </button>
-                  <Link
-                    href={`/organizations/${order.tokoId}/${order.storeId}`}
-                    className="hidden md:flex items-center gap-1.5 border border-slate-200 text-slate-600 px-3 py-1 rounded text-xs font-medium hover:bg-slate-50"
-                  >
-                    Kunjungi Toko
-                  </Link>
-                </div>
-              </div>
-
-              <div className="p-4 space-y-4">
-                {order.items.map((item) => (
-                  <div key={item.id} className="flex gap-4">
-                    <div className="w-20 h-20 bg-slate-100 rounded border border-slate-200 relative shrink-0 cursor-pointer">
-                      <Image
-                        src={item.image}
-                        alt={item.name}
-                        fill
-                        className="object-cover rounded"
-                        unoptimized
-                        onClick={() =>
-                          router.push(`/explore/${item.id_produk}`)
-                        }
-                      />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <h4
-                        className="text-sm font-medium text-slate-800 line-clamp-2 hover:text-primary-600 cursor-pointer"
-                        onClick={() =>
-                          router.push(`/explore/${item.id_produk}`)
-                        }
-                      >
-                        {item.name}
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Variasi: {item.variation}
-                      </p>
-                      <p className="text-xs text-slate-600 mt-1">
-                        x{item.quantity}
-                      </p>
-                    </div>
-                    <div className="text-right flex flex-col justify-end">
-                      <span className="text-sm text-primary-600 font-medium">
-                        {formatPrice(item.price)}
+                  <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/10">
+                    <div
+                      className="flex items-center gap-2 text-sm font-bold cursor-pointer text-slate-800"
+                      onClick={() =>
+                        router.push(
+                          `/organizations/${group.subToko.id_toko}/${group.subToko.id_sub_toko}`,
+                        )
+                      }
+                    >
+                      <span className="bg-primary-600 text-white text-[10px] px-1.5 py-0.5 rounded">
+                        Star+
                       </span>
+                      {group.subToko.nama_proker}
+                      <ChevronRight className="w-4 h-4 text-slate-400" />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() =>
+                          handleOpenChat(
+                            group.subToko.id_sub_toko,
+                            group.subToko.nama_proker,
+                          )
+                        }
+                        className="flex items-center gap-1.5 border border-primary-600 text-primary-600 px-3 py-1 rounded text-xs font-medium hover:bg-primary-50"
+                      >
+                        Chat
+                      </button>
+                      <Link
+                        href={`/organizations/${group.subToko.id_toko}/${group.subToko.id_sub_toko}`}
+                        className="hidden md:flex items-center gap-1.5 border border-slate-200 text-slate-600 px-3 py-1 rounded text-xs font-medium hover:bg-slate-50"
+                      >
+                        Kunjungi Toko
+                      </Link>
                     </div>
                   </div>
-                ))}
-              </div>
 
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
-                <div className="flex items-center gap-4 text-sm w-full md:w-auto">
-                  <div className="text-slate-600 flex-1 md:flex-none">
+                  <div className="p-4 space-y-4">
+                    {group.items.map((item: any) => (
+                      <div key={item.id} className="flex gap-4">
+                        <div className="relative w-20 h-20 border rounded cursor-pointer bg-slate-100 border-slate-200 shrink-0">
+                          <Image
+                            src={item.image}
+                            alt={item.name}
+                            fill
+                            className="object-cover rounded"
+                            unoptimized
+                            onClick={() =>
+                              router.push(`/explore/${item.id_produk}`)
+                            }
+                          />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <h4
+                            className="text-sm font-medium cursor-pointer text-slate-800 line-clamp-2 hover:text-primary-600"
+                            onClick={() =>
+                              router.push(`/explore/${item.id_produk}`)
+                            }
+                          >
+                            {item.name}
+                          </h4>
+                          <p className="mt-1 text-xs text-slate-500">
+                            Variasi: {item.variation}
+                          </p>
+                          <p className="mt-1 text-xs text-slate-600">
+                            x{item.quantity}
+                          </p>
+                          {item.metode_pengambilan === "pickup" && (
+                            <div className="mt-2 text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 max-w-lg">
+                              <p className="text-slate-600 font-semibold">
+                                📍 Info Pick Up:
+                              </p>
+                              <p className="text-slate-500 mt-0.5">
+                                Lokasi Stand:{" "}
+                                {item.alamat_pengambilan ||
+                                  "Stand Toko, Gedung A Lt.1"}
+                              </p>
+                              <p className="text-slate-500">
+                                Waktu Ambil: {item.tgl_ambil || "-"}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex flex-col justify-start text-right">
+                          <span className="text-sm font-medium text-primary-600">
+                            {formatPrice(item.price)}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex justify-end p-4 border-t bg-slate-50 border-slate-100">
+                <div className="flex items-center w-full gap-4 text-sm md:w-auto">
+                  <div className="flex-1 text-slate-600 md:flex-none">
                     Total Pesanan:
                   </div>
-                  <div className="font-bold text-primary-600 text-lg">
+                  <div className="text-lg font-bold text-primary-600">
                     {formatPrice(order.total_harga)}
                   </div>
                 </div>
@@ -704,8 +874,8 @@ function OrderDetailContent() {
             </div>
 
             {/* Price Summary (Details) */}
-            <div className="bg-white md:rounded-sm shadow-sm p-4 text-sm space-y-3">
-              <div className="flex justify-between items-center text-slate-600">
+            <div className="p-4 space-y-3 text-sm bg-white shadow-sm md:rounded-sm">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Subtotal Produk</span>
                 <span>
                   {formatPrice(
@@ -713,12 +883,12 @@ function OrderDetailContent() {
                   )}
                 </span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex items-center justify-between text-slate-600">
                 <span>Subtotal Pengiriman</span>
                 <span>{formatPrice(order.shippingFee)}</span>
               </div>
               {order.discount !== 0 && (
-                <div className="flex justify-between items-center text-slate-600">
+                <div className="flex items-center justify-between text-slate-600">
                   <span className="flex items-center gap-1">
                     Total Diskon Pengiriman <Info className="w-3.5 h-3.5" />
                   </span>
@@ -727,14 +897,14 @@ function OrderDetailContent() {
                   </span>
                 </div>
               )}
-              <div className="flex justify-between items-center text-slate-600">
+              <div className="flex items-center justify-between text-slate-600">
                 <span className="flex items-center gap-1">
                   Biaya Layanan <Info className="w-3.5 h-3.5" />
                 </span>
                 <span>{formatPrice(order.serviceFee)}</span>
               </div>
 
-              <div className="pt-3 border-t border-slate-100 flex justify-between items-center">
+              <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                 <span className="font-bold text-slate-800">
                   Total Pembayaran
                 </span>
@@ -745,30 +915,30 @@ function OrderDetailContent() {
             </div>
 
             {/* Order Details Footer */}
-            <div className="bg-white md:rounded-sm shadow-sm p-4 text-xs md:text-sm text-slate-600 space-y-3">
-              <div className="flex justify-between items-center">
+            <div className="p-4 space-y-3 text-xs bg-white shadow-sm md:rounded-sm md:text-sm text-slate-600">
+              <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2">No. Pesanan</span>
-                <div className="flex items-center gap-2 font-medium text-slate-800 uppercase">
+                <div className="flex items-center gap-2 font-medium uppercase text-slate-800">
                   {order.kode_unik}
                   <button
                     onClick={() => copyToClipboard(order.kode_unik)}
-                    className="text-primary-600 font-bold ml-2"
+                    className="ml-2 font-bold text-primary-600"
                   >
                     SALIN
                   </button>
                 </div>
               </div>
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span>Waktu Pemesanan</span>
                 <span>{formatDate(order.tgl_pesan)}</span>
               </div>
               {/* {order.payment?.date && (
-                <div className="flex justify-between items-center">
+                <div className="flex items-center justify-between">
                   <span>Waktu Pembayaran</span>
                   <span>{formatDate(order.payment.date)}</span>
                 </div>
               )} */}
-              <div className="flex justify-between items-center">
+              <div className="flex items-center justify-between">
                 <span>Metode Pembayaran</span>
                 <span className="font-medium text-slate-800">
                   {formatPaymentMethod(order.payment?.method)}
@@ -777,8 +947,8 @@ function OrderDetailContent() {
             </div>
 
             {/* Action Buttons: Sticky Bottom on Mobile, static right on Desktop */}
-            <div className="sticky bottom-4 left-0 right-0 bg-white border-t border-slate-100 p-3 md:p-0 md:bg-transparent md:border-none z-50">
-              <div className="max-w-7xl mx-auto flex justify-end gap-3 md:gap-4 md:bg-white md:p-4 md:shadow-sm md:rounded-sm">
+            <div className="sticky left-0 right-0 z-50 p-3 bg-white border-t bottom-4 border-slate-100 md:p-0 md:bg-transparent md:border-none">
+              <div className="flex justify-end gap-3 mx-auto max-w-7xl md:gap-4 md:bg-white md:p-4 md:shadow-sm md:rounded-sm">
                 {order.status_pesanan === "menunggu_pembayaran" && (
                   <>
                     <button
@@ -787,7 +957,10 @@ function OrderDetailContent() {
                     >
                       Batalkan Pesanan
                     </button>
-                    <button className="flex-1 md:flex-none px-6 py-2.5 bg-primary-600 text-white font-medium rounded hover:bg-primary-700 shadow-md transition-colors">
+                    <button
+                      onClick={() => handlePayNow(order.snap_token)}
+                      className="flex-1 md:flex-none px-6 py-2.5 bg-primary-600 text-white font-medium rounded hover:bg-primary-700 shadow-md transition-colors"
+                    >
                       Bayar Sekarang
                     </button>
                   </>
@@ -830,7 +1003,7 @@ function OrderDetailContent() {
                   order.status_pesanan === "siap_diambil") && (
                   <>
                     <button
-                      onClick={handleOpenChat}
+                      onClick={() => handleOpenChat()}
                       className="flex-1 md:flex-none px-6 py-2.5 border border-slate-300 text-slate-700 font-medium rounded hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                     >
                       Hubungi Penjual
@@ -847,7 +1020,7 @@ function OrderDetailContent() {
                 {(order.status_pesanan === "diproses" ||
                   order.status_pesanan === "menunggu_konfirmasi") && (
                   <button
-                    onClick={handleOpenChat}
+                    onClick={() => handleOpenChat()}
                     className="flex-1 md:flex-none px-6 py-2.5 border border-primary-600 text-primary-600 font-medium rounded hover:bg-primary-50 transition-colors flex items-center justify-center gap-2"
                   >
                     <Store className="w-5 h-5" /> Hubungi Penjual
@@ -861,14 +1034,14 @@ function OrderDetailContent() {
 
       {/* Rating Modal */}
       {showRatingModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 text-left">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 text-left bg-black/50">
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white rounded-sm shadow-lg max-w-md w-full overflow-hidden"
+            className="w-full max-w-md overflow-hidden bg-white rounded-sm shadow-lg"
           >
             <div className="flex items-center justify-between p-4 border-b border-slate-100">
-              <h3 className="font-bold text-slate-800 text-sm md:text-base">
+              <h3 className="text-sm font-bold text-slate-800 md:text-base">
                 {isReadOnlyRating ? "Detail Penilaian" : "Penilaian Pesanan"}
               </h3>
               <button
@@ -879,11 +1052,13 @@ function OrderDetailContent() {
               </button>
             </div>
             <div className="p-4 space-y-4">
-              <div className="text-center space-y-1">
-                <p className="text-xs text-slate-500 uppercase tracking-wider">
-                  {isReadOnlyRating ? "Sub-toko yang Dinilai" : "Menilai Sub-toko"}
+              <div className="space-y-1 text-center">
+                <p className="text-xs tracking-wider uppercase text-slate-500">
+                  {isReadOnlyRating
+                    ? "Sub-toko yang Dinilai"
+                    : "Menilai Sub-toko"}
                 </p>
-                <p className="font-bold text-slate-800 text-base">
+                <p className="text-base font-bold text-slate-800">
                   {order.storeName}
                 </p>
               </div>
@@ -917,14 +1092,16 @@ function OrderDetailContent() {
                 </label>
                 <textarea
                   value={ratingComment}
-                  onChange={(e) => !isReadOnlyRating && setRatingComment(e.target.value)}
+                  onChange={(e) =>
+                    !isReadOnlyRating && setRatingComment(e.target.value)
+                  }
                   disabled={isReadOnlyRating}
                   placeholder={
                     isReadOnlyRating
                       ? "Tidak ada komentar."
                       : "Bagikan pengalaman Anda berbelanja di sub-toko ini..."
                   }
-                  className="w-full h-24 p-2 text-sm border border-slate-200 rounded-sm focus:outline-none focus:ring-1 focus:ring-primary-500 resize-none text-slate-800 disabled:bg-slate-50"
+                  className="w-full h-24 p-2 text-sm border rounded-sm resize-none border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-500 text-slate-800 disabled:bg-slate-50"
                 />
               </div>
             </div>
@@ -933,7 +1110,7 @@ function OrderDetailContent() {
                 <button
                   type="button"
                   onClick={() => setShowRatingModal(false)}
-                  className="px-6 py-2 bg-primary-600 text-white text-sm font-medium rounded-sm hover:bg-primary-700 transition-colors shadow-md"
+                  className="px-6 py-2 text-sm font-medium text-white transition-colors rounded-sm shadow-md bg-primary-600 hover:bg-primary-700"
                 >
                   Tutup
                 </button>
@@ -943,7 +1120,7 @@ function OrderDetailContent() {
                     type="button"
                     onClick={() => setShowRatingModal(false)}
                     disabled={isSubmittingRating}
-                    className="px-4 py-2 border border-slate-200 text-slate-600 text-sm font-medium rounded-sm hover:bg-slate-100 transition-colors"
+                    className="px-4 py-2 text-sm font-medium transition-colors border rounded-sm border-slate-200 text-slate-600 hover:bg-slate-100"
                   >
                     Batal
                   </button>
@@ -951,7 +1128,7 @@ function OrderDetailContent() {
                     type="button"
                     onClick={handleSubmitRating}
                     disabled={isSubmittingRating}
-                    className="px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-sm hover:bg-primary-700 transition-colors flex items-center gap-2 shadow-md"
+                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-sm shadow-md bg-primary-600 hover:bg-primary-700"
                   >
                     {isSubmittingRating ? (
                       <>

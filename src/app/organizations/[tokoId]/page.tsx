@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -13,6 +14,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 
 type TokoDetail = {
@@ -116,9 +118,9 @@ function TokoDetailContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="flex flex-col min-h-screen bg-slate-50">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex items-center justify-center flex-1">
           <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
         </div>
       </div>
@@ -127,19 +129,19 @@ function TokoDetailContent() {
 
   if (!toko) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="flex flex-col min-h-screen bg-slate-50">
         <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <Store className="w-16 h-16 text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
+        <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
+          <Store className="w-16 h-16 mb-4 text-slate-300" />
+          <h2 className="mb-2 text-xl font-bold text-slate-900">
             Toko Tidak Ditemukan
           </h2>
-          <p className="text-slate-500 mb-6">
+          <p className="mb-6 text-slate-500">
             Toko yang Anda cari mungkin telah dihapus atau tidak tersedia.
           </p>
           <button
             onClick={() => window.history.back()}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            className="px-6 py-2 text-white rounded-lg bg-primary-600 hover:bg-primary-700"
           >
             Kembali
           </button>
@@ -149,27 +151,29 @@ function TokoDetailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
+    <div className="flex flex-col min-h-screen pb-20 bg-slate-50">
       <Navbar />
 
       {/* Hero Header */}
-      <div className="bg-white border-b border-slate-200 pt-8 pb-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="pt-8 pb-12 bg-white border-b border-slate-200">
+        <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
           <button
             onClick={() => window.history.back()}
-            className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-primary-600 mb-6 transition-colors"
+            className="inline-flex items-center mb-6 text-sm font-medium transition-colors text-slate-500 hover:text-primary-600"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Kembali
           </button>
 
-          <div className="flex flex-col md:flex-row items-start md:items-center gap-6">
-            <div className="w-24 h-24 rounded-2xl bg-primary-50 flex items-center justify-center text-primary-600 font-bold text-3xl shadow-sm shrink-0 border border-primary-100 overflow-hidden">
+          <div className="flex flex-col items-start gap-6 md:flex-row md:items-center">
+            <div className="relative flex items-center justify-center w-24 h-24 overflow-hidden text-3xl font-bold border shadow-sm rounded-2xl bg-primary-50 text-primary-600 shrink-0 border-primary-100">
               {toko.logo ? (
-                <img
+                <Image
                   src={toko.logo}
                   alt={toko.name}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  unoptimized
                 />
               ) : (
                 toko.name.substring(0, 2).toUpperCase()
@@ -177,29 +181,29 @@ function TokoDetailContent() {
             </div>
 
             <div className="flex-1">
-              <div className="inline-block px-3 py-1 bg-blue-50 text-blue-600 text-xs font-bold rounded-full mb-2">
+              <div className="inline-block px-3 py-1 mb-2 text-xs font-bold text-blue-600 rounded-full bg-blue-50">
                 {toko.organisasiName}
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-2">
+              <h1 className="mb-2 text-3xl font-extrabold md:text-4xl text-slate-900">
                 {toko.name}
               </h1>
-              <p className="text-slate-600 max-w-2xl flex items-start gap-1">
+              <p className="flex items-start max-w-2xl gap-1 text-slate-600">
                 <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-slate-400" />
                 Universitas Udayana
               </p>
             </div>
 
-            <div className="flex gap-4 shrink-0 w-full md:w-auto">
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1 md:flex-none text-center md:text-left">
-                <div className="text-sm text-slate-500 font-medium mb-1">
+            <div className="flex w-full gap-4 shrink-0 md:w-auto">
+              <div className="flex-1 p-4 text-center border bg-slate-50 rounded-xl border-slate-100 md:flex-none md:text-left">
+                <div className="mb-1 text-sm font-medium text-slate-500">
                   Total Proker
                 </div>
                 <div className="text-2xl font-bold text-slate-900">
                   {toko.subTokos.length}
                 </div>
               </div>
-              <div className="bg-slate-50 rounded-xl p-4 border border-slate-100 flex-1 md:flex-none text-center md:text-left">
-                <div className="text-sm text-slate-500 font-medium mb-1">
+              <div className="flex-1 p-4 text-center border bg-slate-50 rounded-xl border-slate-100 md:flex-none md:text-left">
+                <div className="mb-1 text-sm font-medium text-slate-500">
                   Total Produk
                 </div>
                 <div className="text-2xl font-bold text-slate-900">
@@ -209,58 +213,58 @@ function TokoDetailContent() {
             </div>
           </div>
 
-          <div className="mt-8 pt-8 border-t border-slate-100">
-            <h3 className="text-lg font-bold text-slate-900 mb-2">
+          <div className="pt-8 mt-8 border-t border-slate-100">
+            <h3 className="mb-2 text-lg font-bold text-slate-900">
               Tentang Toko
             </h3>
-            <p className="text-slate-600 leading-relaxed max-w-4xl">
+            <p className="max-w-4xl leading-relaxed text-slate-600">
               {toko.description}
             </p>
           </div>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full space-y-16">
+      <main className="w-full px-4 py-12 mx-auto space-y-16 max-w-7xl sm:px-6 lg:px-8">
         {/* Sub-Toko List */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
               <Store className="w-6 h-6 text-primary-600" />
               Daftar Proker (Sub-Toko)
             </h2>
           </div>
 
           {toko.subTokos.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-slate-500">
+            <div className="p-8 text-center bg-white border rounded-2xl border-slate-200 text-slate-500">
               Belum ada proker yang terdaftar pada toko ini.
             </div>
           ) : (
-            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {toko.subTokos.map((st: any, i: number) => (
                 <motion.div
                   key={st.id_sub_toko}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.4, delay: i * 0.1 }}
-                  className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-primary-300 hover:shadow-lg transition-all group relative flex flex-col"
+                  className="relative flex flex-col p-6 transition-all bg-white border rounded-2xl border-slate-200 hover:border-primary-300 hover:shadow-lg group"
                 >
-                  <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center mb-4">
+                  <div className="flex items-center justify-center w-12 h-12 mb-4 text-blue-600 rounded-xl bg-blue-50">
                     <Store className="w-6 h-6" />
                   </div>
-                  <h3 className="text-xl font-bold text-slate-900 mb-2">
+                  <h3 className="mb-2 text-xl font-bold text-slate-900">
                     {st.nama_proker}
                   </h3>
-                  <p className="text-sm text-slate-500 mb-6 line-clamp-2 flex-1">
+                  <p className="flex-1 mb-6 text-sm text-slate-500 line-clamp-2">
                     {st.deskripsi || "Tidak ada deskripsi"}
                   </p>
 
                   <div className="flex items-center justify-between mt-auto">
-                    <span className="text-sm font-medium text-slate-600 bg-slate-100 px-3 py-1 rounded-full">
+                    <span className="px-3 py-1 text-sm font-medium rounded-full text-slate-600 bg-slate-100">
                       {st.produk?.length || 0} Produk
                     </span>
                     <Link
                       href={`/organizations/${toko.id}/${st.id_sub_toko}`}
-                      className="text-primary-600 font-medium text-sm flex items-center hover:text-primary-700 transition-colors"
+                      className="flex items-center text-sm font-medium transition-colors text-primary-600 hover:text-primary-700"
                     >
                       Kunjungi <ExternalLink className="w-4 h-4 ml-1" />
                     </Link>
@@ -274,18 +278,18 @@ function TokoDetailContent() {
         {/* All Products */}
         <section>
           <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
               <Package className="w-6 h-6 text-primary-600" />
               Semua Produk
             </h2>
           </div>
 
           {toko.allProducts.length === 0 ? (
-            <div className="bg-white rounded-2xl p-8 border border-slate-200 text-center text-slate-500">
+            <div className="p-8 text-center bg-white border rounded-2xl border-slate-200 text-slate-500">
               Belum ada produk yang dijual dari proker manapun.
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5 md:gap-6">
               {toko.allProducts.map((product: any, i: number) => (
                 <motion.div
                   key={product.id_produk}
@@ -297,16 +301,18 @@ function TokoDetailContent() {
                     href={`/explore/${product.id_produk}`}
                     className="block group"
                   >
-                    <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-primary-300 transition-all">
-                      <div className="aspect-square bg-slate-100 relative overflow-hidden">
+                    <div className="overflow-hidden transition-all bg-white border shadow-sm rounded-2xl border-slate-200 hover:shadow-xl hover:border-primary-300">
+                      <div className="relative overflow-hidden aspect-square bg-slate-100">
                         {product.foto ? (
-                          <img
+                          <Image
                             src={product.foto}
                             alt={product.nama_produk}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            unoptimized
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <div className="flex items-center justify-center w-full h-full text-slate-300">
                             <Package className="w-10 h-10" />
                           </div>
                         )}
@@ -315,10 +321,10 @@ function TokoDetailContent() {
                         </div>
                       </div>
                       <div className="p-4">
-                        <div className="text-xs text-primary-600 font-semibold mb-1 truncate">
+                        <div className="mb-1 text-xs font-semibold truncate text-primary-600">
                           {product.subTokoName}
                         </div>
-                        <h3 className="text-sm font-medium text-slate-900 mb-2 line-clamp-2 leading-tight group-hover:text-primary-600 transition-colors">
+                        <h3 className="mb-2 text-sm font-medium leading-tight transition-colors text-slate-900 line-clamp-2 group-hover:text-primary-600">
                           {product.nama_produk}
                         </h3>
                         <p className="text-lg font-bold text-slate-900">
@@ -345,8 +351,8 @@ export default function TokoDetailPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col min-h-screen bg-slate-50">
+          <div className="flex items-center justify-center flex-1">
             <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
           </div>
         </div>

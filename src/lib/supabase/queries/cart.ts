@@ -16,9 +16,11 @@ export interface CartItem {
     foto: string | null;
     kategori: string | null;
     status_aktif: boolean;
+    metode_jualan: string;
     sub_toko: {
       id_sub_toko: string;
       nama_proker: string;
+      alamat: string | null;
       toko: {
         id_toko: string;
         nama_toko: string;
@@ -46,9 +48,11 @@ const CART_SELECT = `
     foto,
     kategori,
     status_aktif,
+    metode_jualan,
     sub_toko (
       id_sub_toko,
       nama_proker,
+      alamat,
       toko (
         id_toko,
         nama_toko,

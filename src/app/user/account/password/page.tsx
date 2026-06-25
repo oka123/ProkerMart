@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import React, { useState, useEffect } from "react";
@@ -24,7 +25,9 @@ export default function ChangePasswordPage() {
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push("/auth/login");
         return;
@@ -113,7 +116,7 @@ export default function ChangePasswordPage() {
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="lg:flex lg:gap-6">
           <aside className="hidden lg:block shrink-0">
             <UserSidebar />
@@ -127,11 +130,11 @@ export default function ChangePasswordPage() {
             />
 
             <div className="bg-white lg:rounded-sm lg:shadow-sm min-h-125">
-              <div className="hidden lg:block p-6 border-b border-slate-100">
+              <div className="hidden p-6 border-b lg:block border-slate-100">
                 <h2 className="text-lg font-medium text-slate-900">
                   Ubah Password
                 </h2>
-                <p className="text-sm text-slate-500 mt-1">
+                <p className="mt-1 text-sm text-slate-500">
                   Untuk keamanan akun Anda, mohon tidak menyebarkan password
                   Anda ke orang lain.
                 </p>
@@ -143,9 +146,9 @@ export default function ChangePasswordPage() {
                     <motion.div
                       initial={{ opacity: 0, scale: 0.95 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      className="text-center py-12 space-y-4"
+                      className="py-12 space-y-4 text-center"
                     >
-                      <div className="w-20 h-20 bg-green-50 rounded-full flex items-center justify-center mx-auto">
+                      <div className="flex items-center justify-center w-20 h-20 mx-auto rounded-full bg-green-50">
                         <CheckCircle2 className="w-10 h-10 text-green-500" />
                       </div>
                       <h3 className="text-xl font-semibold text-slate-900">
@@ -157,7 +160,7 @@ export default function ChangePasswordPage() {
                       </p>
                       <button
                         onClick={() => setStatus("idle")}
-                        className="mt-4 px-8 py-2 bg-primary-600 text-white rounded-sm hover:bg-primary-700 transition-all font-medium"
+                        className="px-8 py-2 mt-4 font-medium text-white transition-all rounded-sm bg-primary-600 hover:bg-primary-700"
                       >
                         Kembali
                       </button>
@@ -167,10 +170,10 @@ export default function ChangePasswordPage() {
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       onSubmit={handleSubmit}
-                      className="space-y-6 max-w-xl"
+                      className="max-w-xl space-y-6"
                     >
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <Lock className="w-4 h-4 text-slate-400" />
                           Password Saat Ini
                         </label>
@@ -186,12 +189,12 @@ export default function ChangePasswordPage() {
                               })
                             }
                             placeholder="Masukkan password saat ini"
-                            className="w-full border border-slate-200 rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 transition-all pr-12"
+                            className="w-full px-4 py-3 pr-12 text-sm transition-all border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                           />
                           <button
                             type="button"
                             onClick={() => toggleVisibility("current")}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            className="absolute -translate-y-1/2 right-4 top-1/2 text-slate-400 hover:text-slate-600"
                           >
                             {showPasswords.current ? (
                               <EyeOff className="w-5 h-5" />
@@ -203,7 +206,7 @@ export default function ChangePasswordPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <ShieldCheck className="w-4 h-4 text-slate-400" />
                           Password Baru
                         </label>
@@ -219,12 +222,12 @@ export default function ChangePasswordPage() {
                               })
                             }
                             placeholder="Minimal 8 karakter"
-                            className="w-full border border-slate-200 rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 transition-all pr-12"
+                            className="w-full px-4 py-3 pr-12 text-sm transition-all border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                           />
                           <button
                             type="button"
                             onClick={() => toggleVisibility("new")}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            className="absolute -translate-y-1/2 right-4 top-1/2 text-slate-400 hover:text-slate-600"
                           >
                             {showPasswords.new ? (
                               <EyeOff className="w-5 h-5" />
@@ -240,7 +243,7 @@ export default function ChangePasswordPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <label className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                        <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
                           <CheckCircle2 className="w-4 h-4 text-slate-400" />
                           Konfirmasi Password Baru
                         </label>
@@ -256,12 +259,12 @@ export default function ChangePasswordPage() {
                               })
                             }
                             placeholder="Ulangi password baru"
-                            className="w-full border border-slate-200 rounded-sm px-4 py-3 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 transition-all pr-12"
+                            className="w-full px-4 py-3 pr-12 text-sm transition-all border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                           />
                           <button
                             type="button"
                             onClick={() => toggleVisibility("confirm")}
-                            className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            className="absolute -translate-y-1/2 right-4 top-1/2 text-slate-400 hover:text-slate-600"
                           >
                             {showPasswords.confirm ? (
                               <EyeOff className="w-5 h-5" />
@@ -276,7 +279,7 @@ export default function ChangePasswordPage() {
                         <motion.div
                           initial={{ opacity: 0, y: -10 }}
                           animate={{ opacity: 1, y: 0 }}
-                          className="bg-red-50 border border-red-100 p-3 rounded-sm flex items-center gap-2 text-red-600 text-sm"
+                          className="flex items-center gap-2 p-3 text-sm text-red-600 border border-red-100 rounded-sm bg-red-50"
                         >
                           <AlertCircle className="w-4 h-4 shrink-0" />
                           <span>{errorMessage}</span>

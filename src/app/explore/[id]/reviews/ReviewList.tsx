@@ -10,7 +10,7 @@ interface ReviewListProps {
 
 export function ReviewList({ initialReviews }: ReviewListProps) {
   const [filterRating, setFilterRating] = useState<number | null>(null);
-  
+
   const reviews = initialReviews;
 
   // Calculate average rating
@@ -20,17 +20,17 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
       : 0;
 
   // Determine reviews to show
-  const filteredReviews = filterRating 
-    ? reviews.filter(r => r.rating === filterRating)
+  const filteredReviews = filterRating
+    ? reviews.filter((r) => r.rating === filterRating)
     : reviews;
 
   return (
-    <div className="w-full bg-white rounded-2xl border border-slate-200 p-6 md:p-8 shadow-sm">
+    <div className="w-full p-6 bg-white border shadow-sm rounded-2xl border-slate-200 md:p-8">
       {/* Grid: Rating Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+      <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-3">
         {/* Average Score */}
-        <div className="flex flex-col items-center justify-center text-center pb-6 md:pb-0 border-b md:border-b-0 md:border-r border-slate-150">
-          <span className="text-5xl font-extrabold text-blue-600 tracking-tight mb-2">
+        <div className="flex flex-col items-center justify-center pb-6 text-center border-b md:pb-0 md:border-b-0 md:border-r border-slate-150">
+          <span className="mb-2 text-5xl font-extrabold tracking-tight text-blue-600">
             {avgRating.toFixed(1)}
           </span>
           <div className="flex items-center gap-1 mb-2">
@@ -45,27 +45,29 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
               />
             ))}
           </div>
-          <span className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
+          <span className="text-xs font-semibold tracking-wider uppercase text-slate-500">
             {reviews.length} Ulasan
           </span>
         </div>
 
         {/* Rating Bars */}
-        <div className="md:col-span-2 flex flex-col justify-center gap-2 md:pl-4">
+        <div className="flex flex-col justify-center gap-2 md:col-span-2 md:pl-4">
           {[5, 4, 3, 2, 1].map((ratingVal) => {
             const count = reviews.filter((r) => r.rating === ratingVal).length;
             const pct = reviews.length > 0 ? (count / reviews.length) * 100 : 0;
             return (
               <div key={ratingVal} className="flex items-center gap-3 text-sm">
-                <span className="w-3 font-semibold text-slate-700">{ratingVal}</span>
+                <span className="w-3 font-semibold text-slate-700">
+                  {ratingVal}
+                </span>
                 <Star className="w-4 h-4 text-amber-400 fill-amber-400 shrink-0" />
                 <div className="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-blue-600 rounded-full transition-all duration-500"
+                    className="h-full transition-all duration-500 bg-blue-600 rounded-full"
                     style={{ width: `${pct}%` }}
                   />
                 </div>
-                <span className="w-8 text-right text-slate-500 font-medium">
+                <span className="w-8 font-medium text-right text-slate-500">
                   {count}
                 </span>
               </div>
@@ -77,7 +79,7 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
       {/* Filter Section */}
       {reviews.length > 0 && (
         <div className="flex flex-wrap items-center gap-2 mb-8">
-          <div className="flex items-center gap-2 text-sm font-medium text-slate-700 mr-2">
+          <div className="flex items-center gap-2 mr-2 text-sm font-medium text-slate-700">
             <Filter className="w-4 h-4" />
             <span>Filter:</span>
           </div>
@@ -134,20 +136,20 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
             return (
               <div
                 key={review.id_ulasan}
-                className="bg-slate-50 rounded-xl border border-slate-200 p-5 shadow-xs flex gap-4"
+                className="flex gap-4 p-5 border shadow-xs bg-slate-50 rounded-xl border-slate-200"
               >
                 {/* Initials Avatar */}
-                <div className="w-10 h-10 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-sm shrink-0 shadow-xs">
+                <div className="flex items-center justify-center w-10 h-10 text-sm font-bold text-white rounded-full shadow-xs bg-linear-to-tr from-blue-500 to-blue-600 shrink-0">
                   {initials}
                 </div>
 
                 {/* Review Content */}
                 <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-2">
-                    <h4 className="font-bold text-slate-800 text-sm truncate">
+                  <div className="flex flex-col justify-between gap-1 mb-2 sm:flex-row sm:items-center">
+                    <h4 className="text-sm font-bold truncate text-slate-800">
                       {review.pengguna?.nama || "Pembeli ProkerMart"}
                     </h4>
-                    <span className="text-xs text-slate-400 font-medium">
+                    <span className="text-xs font-medium text-slate-400">
                       {new Date(review.tgl_ulasan).toLocaleDateString("id-ID", {
                         day: "numeric",
                         month: "long",
@@ -171,7 +173,7 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
                   </div>
 
                   {/* Comment Text */}
-                  <p className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-slate-600">
                     {review.komentar || "Tidak ada komentar tertulis."}
                   </p>
                 </div>
@@ -179,10 +181,12 @@ export function ReviewList({ initialReviews }: ReviewListProps) {
             );
           })
         ) : (
-          <div className="text-center py-12 bg-slate-50 rounded-xl border border-slate-200">
-            <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <div className="py-12 text-center border bg-slate-50 rounded-xl border-slate-200">
+            <MessageSquare className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <p className="text-slate-500">
-              {filterRating ? `Tidak ada ulasan dengan rating ${filterRating}.` : "Belum ada ulasan untuk produk ini."}
+              {filterRating
+                ? `Tidak ada ulasan dengan rating ${filterRating}.`
+                : "Belum ada ulasan untuk produk ini."}
             </p>
           </div>
         )}

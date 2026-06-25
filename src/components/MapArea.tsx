@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useRouter } from "next/navigation";
+import router from "next/router";
 
 const createCustomIcon = (color: string) => {
   return L.divIcon({
@@ -57,14 +57,15 @@ export default function MapArea({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markersRef = useRef<{ [key: string]: L.Marker }>({});
-  const router = useRouter();
+  const [initLat] = useState(userLocation.lat);
+  const [initLng] = useState(userLocation.lng);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     // Initialize Leaflet map manually to have full control over lifecycle
     const map = L.map(mapContainerRef.current, {
-      center: [userLocation.lat, userLocation.lng],
+      center: [initLat, initLng],
       zoom: 16,
       zoomControl: true,
     });
@@ -86,8 +87,7 @@ export default function MapArea({
       mapInstanceRef.current = null;
       markersRef.current = {};
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // Run once on mount only
+  }, [initLat, initLng]); // Run once on mount only
 
   // Update markers when shops or userLocation change
   useEffect(() => {
@@ -156,7 +156,7 @@ export default function MapArea({
         marker.on("click", () => onMarkerClick(item.id));
       }
     });
-  }, [markers, onMarkerClick, router]);
+  }, [markers, onMarkerClick]);
 
   // Update view when userLocation changes after mount
   useEffect(() => {

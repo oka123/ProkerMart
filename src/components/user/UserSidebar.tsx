@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Package, Bell, Ticket, PencilLine, LogOut } from "lucide-react";
+import { User, Package, Bell, Ticket, PencilLine } from "lucide-react";
 import Image from "next/image";
 import { LogoutButton } from "../logout-button";
 import { useEffect, useState } from "react";

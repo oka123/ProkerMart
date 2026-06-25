@@ -1,6 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ShoppingCart, Search, User, Menu, MessageSquare } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -15,6 +17,7 @@ interface NavbarProps {
 }
 
 export function Navbar({ variant = "default" }: NavbarProps) {
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -27,7 +30,6 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     const fetchCartCount = async () => {
       try {
         const items = await getCartItems();
-        console.log(items);
 
         // Menjumlahkan berdasarkan properti 'jumlah'
         const total = items.length;
@@ -130,13 +132,21 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <div className="hidden md:flex items-center space-x-8">
             <Link
               href="/explore"
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className={`${
+                pathname.startsWith("/explore")
+                  ? "text-primary-600 font-semibold"
+                  : "text-slate-600 hover:text-primary-600 font-medium"
+              } transition-colors`}
             >
-              Eksplor
+              Explore
             </Link>
             <Link
               href="/organizations"
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className={`${
+                pathname.startsWith("/organizations")
+                  ? "text-primary-600 font-semibold"
+                  : "text-slate-600 hover:text-primary-600 font-medium"
+              } transition-colors`}
             >
               Organisasi
             </Link>
@@ -274,7 +284,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               {!loading && user ? (
                 <Link
                   href="/user"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold text-primary-600 active:bg-primary-100 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold  active:bg-primary-100 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <User className="w-5 h-5" />
@@ -291,14 +301,22 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               )}
               <Link
                 href="/explore"
-                className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                className={`block px-4 py-2 rounded-md text-base ${
+                  pathname.startsWith("/explore")
+                    ? "font-semibold text-primary-600 bg-slate-50"
+                    : "font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Produk
+                Explore
               </Link>
               <Link
                 href="/organizations"
-                className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                className={`block px-4 py-2 rounded-md text-base ${
+                  pathname.startsWith("/organizations")
+                    ? "font-semibold text-primary-600 bg-slate-50"
+                    : "font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Organisasi

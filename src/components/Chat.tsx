@@ -1,21 +1,16 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useCallback } from "react";
 import {
   MessageSquare,
   X,
   Send,
-  Image as ImageIcon,
-  Smile,
   Search,
   ArrowLeft,
   Check,
   CheckCheck,
-  Store,
-  ShieldCheck,
   Paperclip,
-  Phone,
-  Video,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -74,15 +69,10 @@ export function Chat() {
     return () => {
       subscription.unsubscribe();
     };
-  }, []);
+  }, [supabase]);
 
-  // Fetch Contacts
-  useEffect(() => {
+  const fetchContacts = useCallback(async () => {
     if (!user) return;
-    fetchContacts();
-  }, [user]);
-
-  const fetchContacts = async () => {
     const { data: userData } = await supabase.from('pengguna').select('role').eq('id_pengguna', user.id).single();
     const role = userData?.role || 'pembeli';
 
@@ -96,34 +86,31 @@ export function Chat() {
           id_sub_toko,
           sub_toko (
             nama_proker,
-            foto_sampul,
-            toko (nama_toko)
-          ),
-          chat_messages (pesan, created_at)
+            toko (
+              nama_toko
+            )
+          )
         `)
-        .eq('id_pembeli', user.id)
-        .order('created_at', { referencedTable: 'chat_messages', ascending: true });
-        
-      rooms = (rawRooms || []).map((r: any) => {
-        const msgs = r.chat_messages || [];
-        const lastMsg = msgs.length > 0 ? msgs[msgs.length - 1] : null;
-        const subToko = r.sub_toko;
-        const tokoName = Array.isArray(subToko?.toko) ? subToko?.toko[0]?.nama_toko : subToko?.toko?.nama_toko;
-        const displayName = tokoName ? `${tokoName} - ${subToko.nama_proker}` : subToko?.nama_proker;
+        .eq('id_pembeli', user.id);
 
-        return {
-          id: r.id_room,
-          id_sub_toko: r.id_sub_toko,
-          name: displayName || "Toko",
-          avatar: subToko?.foto_sampul || `https://placehold.co/100x100?text=${encodeURIComponent(displayName?.charAt(0) || 'T')}`,
-          lastMessage: lastMsg ? lastMsg.pesan : "Belum ada pesan",
-          time: lastMsg ? new Date(lastMsg.created_at).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'}) : "",
-          unreadCount: 0,
-          isOnline: true,
-          type: "toko",
-          isPanitiaView: false
-        };
-      });
+      if (rawRooms) {
+        rooms = rawRooms.map((r: any) => {
+          const name = r.sub_toko?.nama_proker || "Toko";
+          const org = r.sub_toko?.toko?.nama_toko || "Ormawa";
+          
+          return {
+            id: r.id_room,
+            id_sub_toko: r.id_sub_toko,
+            name: `${name} (${org})`,
+            avatar: `https://api.dicebear.com/7.x/initials/svg?seed=${name}`,
+            lastMessage: "",
+            time: "",
+            unreadCount: 0,
+            isOnline: true,
+            type: "sub_toko"
+          };
+        });
+      }
     } else {
       // Panitia / Proker view
       const { data: rawRooms } = await supabase
@@ -157,7 +144,15 @@ export function Chat() {
     }
 
     setContacts(rooms);
-  };
+  }, [supabase, user]);
+
+  // Fetch Contacts
+  useEffect(() => {
+    if (!user) return;
+    queueMicrotask(() => {
+      fetchContacts();
+    });
+  }, [user, fetchContacts]);
 
   // Listen for global open event
   useEffect(() => {
@@ -224,7 +219,7 @@ export function Chat() {
     };
     window.addEventListener("openProkerChat", handleOpenChat);
     return () => window.removeEventListener("openProkerChat", handleOpenChat);
-  }, [user, contacts]);
+  }, [user, contacts, supabase]);
 
   // Load Messages and Subscription
   useEffect(() => {
@@ -293,7 +288,7 @@ export function Chat() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [selectedContact, user]);
+  }, [selectedContact, user, supabase]);
 
   useEffect(() => {
     if (scrollRef.current) {

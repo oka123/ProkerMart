@@ -211,7 +211,7 @@ export default function Dashboard() {
                   Pre-order Ditutup
                 </h3>
                 <p className="text-xs text-amber-700">
-                  Pre-order Batch 1 "Kaos Dies Natalis" akan ditutup dalam 3
+                  Pre-order Batch 1 &quot;Kaos Dies Natalis&quot; akan ditutup dalam 3
                   jam.
                 </p>
               </div>

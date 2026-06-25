@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -123,48 +124,48 @@ export default function OrganizationsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       <Navbar />
 
       {/* Header */}
       <div className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 text-center">
-          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4">
+        <div className="px-4 py-12 mx-auto text-center max-w-7xl sm:px-6 lg:px-8">
+          <h1 className="mb-4 text-3xl font-extrabold md:text-5xl text-slate-900">
             Daftar{" "}
             <span className="text-transparent bg-clip-text bg-linear-to-r from-primary-600 to-blue-600">
               Organisasi
             </span>
           </h1>
-          <p className="text-lg text-slate-600 max-w-2xl mx-auto mb-8">
+          <p className="max-w-2xl mx-auto mb-8 text-lg text-slate-600">
             Temukan dan dukung berbagai program kerja dari seluruh organisasi
             mahasiswa, himpunan, dan UKM yang ada di kampus.
           </p>
 
-          <div className="max-w-xl mx-auto relative">
-            <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-              <Search className="h-5 w-5 text-slate-400" />
+          <div className="relative max-w-xl mx-auto">
+            <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+              <Search className="w-5 h-5 text-slate-400" />
             </div>
             <input
               type="text"
               placeholder="Cari nama organisasi atau UKM..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-11 pr-4 py-4 bg-white border border-slate-200 rounded-2xl shadow-sm focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all text-slate-900 outline-none"
+              className="w-full py-4 pr-4 transition-all bg-white border shadow-sm outline-none pl-11 border-slate-200 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 text-slate-900"
             />
           </div>
         </div>
       </div>
 
       {/* Organization List */}
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+      <main className="flex-1 w-full px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-            <Loader2 className="w-10 h-10 animate-spin mb-4 text-primary-500" />
+            <Loader2 className="w-10 h-10 mb-4 animate-spin text-primary-500" />
             <p>Memuat daftar organisasi...</p>
           </div>
         ) : filteredOrgs.length === 0 ? (
-          <div className="text-center py-20 bg-white rounded-2xl border border-slate-200">
-            <Store className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+          <div className="py-20 text-center bg-white border rounded-2xl border-slate-200">
+            <Store className="w-12 h-12 mx-auto mb-3 text-slate-300" />
             <h3 className="text-lg font-medium text-slate-900">
               Tidak Ada Organisasi
             </h3>
@@ -175,21 +176,21 @@ export default function OrganizationsPage() {
             </p>
           </div>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {filteredOrgs.map((org, i) => (
               <motion.div
                 key={org.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="bg-white rounded-2xl p-6 border border-slate-200 hover:border-primary-200 hover:shadow-xl hover:shadow-primary-100/50 transition-all group relative overflow-hidden flex flex-col"
+                className="relative flex flex-col p-6 overflow-hidden transition-all bg-white border rounded-2xl border-slate-200 hover:border-primary-200 hover:shadow-xl hover:shadow-primary-100/50 group"
               >
                 {/* Decorative top border */}
                 <div
                   className={`absolute top-0 left-0 w-full h-2 bg-linear-to-r ${org.color}`}
                 ></div>
 
-                <div className="flex items-start gap-4 mb-4 mt-2">
+                <div className="flex items-start gap-4 mt-2 mb-4">
                   <div
                     className={`w-14 h-14 rounded-xl flex items-center justify-center text-white font-bold text-xl bg-linear-to-br ${org.color} shadow-sm shrink-0`}
                   >
@@ -202,7 +203,7 @@ export default function OrganizationsPage() {
                       </h2>
                       {org.verified && (
                         <div
-                          className="w-4 h-4 bg-blue-500 rounded-full flex items-center justify-center shrink-0"
+                          className="flex items-center justify-center w-4 h-4 bg-blue-500 rounded-full shrink-0"
                           title="Terverifikasi Resmi"
                         >
                           <svg
@@ -221,21 +222,21 @@ export default function OrganizationsPage() {
                         </div>
                       )}
                     </div>
-                    <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
+                    <p className="flex items-center gap-1 mt-1 text-sm text-slate-500">
                       <MapPin className="w-3 h-3" /> Universitas
                     </p>
                   </div>
                 </div>
 
-                <p className="text-slate-600 text-sm mb-6 line-clamp-3 flex-1">
+                <p className="flex-1 mb-6 text-sm text-slate-600 line-clamp-3">
                   {org.description}
                 </p>
 
                 <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-500 mb-1">
+                  <div className="p-3 border bg-slate-50 rounded-xl border-slate-100">
+                    <div className="flex items-center gap-2 mb-1 text-slate-500">
                       <Users className="w-4 h-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wider">
+                      <span className="text-xs font-semibold tracking-wider uppercase">
                         Sub-Toko
                       </span>
                     </div>
@@ -243,10 +244,10 @@ export default function OrganizationsPage() {
                       {org.totalProker}
                     </p>
                   </div>
-                  <div className="bg-slate-50 rounded-xl p-3 border border-slate-100">
-                    <div className="flex items-center gap-2 text-slate-500 mb-1">
+                  <div className="p-3 border bg-slate-50 rounded-xl border-slate-100">
+                    <div className="flex items-center gap-2 mb-1 text-slate-500">
                       <Store className="w-4 h-4" />
-                      <span className="text-xs font-semibold uppercase tracking-wider">
+                      <span className="text-xs font-semibold tracking-wider uppercase">
                         Produk
                       </span>
                     </div>
@@ -259,7 +260,7 @@ export default function OrganizationsPage() {
                 {org.tokoId ? (
                   <Link
                     href={`/organizations/${org.tokoId}`}
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-primary-50 text-primary-600 font-semibold rounded-xl hover:bg-primary-600 hover:text-white transition-colors"
+                    className="flex items-center justify-center w-full gap-2 py-3 font-semibold transition-colors bg-primary-50 text-primary-600 rounded-xl hover:bg-primary-600 hover:text-white"
                   >
                     Kunjungi Toko
                     <ExternalLink className="w-4 h-4" />
@@ -267,7 +268,7 @@ export default function OrganizationsPage() {
                 ) : (
                   <button
                     disabled
-                    className="flex items-center justify-center gap-2 w-full py-3 bg-slate-100 text-slate-400 font-semibold rounded-xl cursor-not-allowed"
+                    className="flex items-center justify-center w-full gap-2 py-3 font-semibold cursor-not-allowed bg-slate-100 text-slate-400 rounded-xl"
                   >
                     Belum Memiliki Toko
                   </button>

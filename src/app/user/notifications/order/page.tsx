@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect } from "react";
@@ -25,13 +26,15 @@ export default function OrderNotificationsPage() {
 
   useEffect(() => {
     async function fetchNotifs() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push("/auth/login");
         return;
       }
 
-      const { data, error } = await supabase
+      const { data } = await supabase
         .from("notifikasi")
         .select("*")
         .eq("id_pengguna", user.id)
@@ -39,6 +42,7 @@ export default function OrderNotificationsPage() {
 
       if (data) {
         // Filter pesanan
+
         const orderNotifs = data.filter((n: any) => {
           const t = n.judul.toLowerCase();
           return t.includes("pesan");
@@ -51,14 +55,18 @@ export default function OrderNotificationsPage() {
   }, [router, supabase]);
 
   const markAllAsRead = async () => {
-    const { data: { user } } = await supabase.auth.getUser();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
     if (user) {
       await supabase
         .from("notifikasi")
         .update({ status_dibaca: true, tgl_baca: new Date().toISOString() })
         .eq("id_pengguna", user.id)
         .eq("status_dibaca", false);
-      setNotifications(notifications.map(n => ({ ...n, status_dibaca: true })));
+      setNotifications(
+        notifications.map((n) => ({ ...n, status_dibaca: true })),
+      );
     }
   };
 
@@ -67,7 +75,11 @@ export default function OrderNotificationsPage() {
       .from("notifikasi")
       .update({ status_dibaca: true, tgl_baca: new Date().toISOString() })
       .eq("id_notifikasi", id);
-    setNotifications(notifications.map(n => n.id_notifikasi === id ? { ...n, status_dibaca: true } : n));
+    setNotifications(
+      notifications.map((n) =>
+        n.id_notifikasi === id ? { ...n, status_dibaca: true } : n,
+      ),
+    );
   };
 
   if (isLoading) {
@@ -84,7 +96,7 @@ export default function OrderNotificationsPage() {
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="lg:flex lg:gap-6">
           <aside className="hidden lg:block">
             <UserSidebar />
@@ -97,65 +109,72 @@ export default function OrderNotificationsPage() {
               rightActions={[]}
             />
 
-            <div className="lg:hidden flex border-b border-slate-50 bg-white">
+            <div className="flex bg-white border-b lg:hidden border-slate-50">
               <Link
                 href="/user/notifications/order"
-                className="flex-1 py-3 text-center text-sm font-medium border-b-2 border-primary-600 text-primary-600"
+                className="flex-1 py-3 text-sm font-medium text-center border-b-2 border-primary-600 text-primary-600"
               >
                 Pesanan
               </Link>
               <Link
                 href="/user/notifications/promotion"
-                className="flex-1 py-3 text-center text-sm font-medium text-slate-500"
+                className="flex-1 py-3 text-sm font-medium text-center text-slate-500"
               >
                 Promosi
               </Link>
               <Link
                 href="/user/notifications/info"
-                className="flex-1 py-3 text-center text-sm font-medium text-slate-500"
+                className="flex-1 py-3 text-sm font-medium text-center text-slate-500"
               >
                 Info
               </Link>
             </div>
 
             <div className="lg:bg-white lg:shadow-sm lg:rounded-sm">
-              <div className="hidden lg:flex justify-end p-4 border-b border-slate-50">
-                <button onClick={markAllAsRead} className="text-sm text-slate-500 hover:text-primary-600 transition-colors">
+              <div className="justify-end hidden p-4 border-b lg:flex border-slate-50">
+                <button
+                  onClick={markAllAsRead}
+                  className="text-sm transition-colors text-slate-500 hover:text-primary-600"
+                >
                   Tandai sebagai sudah dibaca
                 </button>
               </div>
 
               <div className="divide-y divide-slate-50">
                 {notifications.length === 0 ? (
-                   <div className="p-12 text-center text-slate-500">
-                     <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-20" />
-                     <p>Tidak ada notifikasi Pesanan.</p>
-                   </div>
-                ) : notifications.map((notif) => (
-                  <div
-                    key={notif.id_notifikasi}
-                    onClick={() => !notif.status_dibaca && markAsRead(notif.id_notifikasi)}
-                    className={`flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors hover:bg-slate-50/50 cursor-pointer ${!notif.status_dibaca ? "bg-orange-50/30" : "bg-white"}`}
-                  >
-                    <div className="w-12 h-12 lg:w-16 lg:h-16 bg-slate-100 rounded-lg flex items-center justify-center shrink-0 border border-slate-100 overflow-hidden">
-                      <ShoppingBag className="w-6 h-6 lg:w-8 lg:h-8 text-slate-400" />
-                    </div>
-
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center justify-between lg:justify-start gap-3">
-                        <h3 className="text-sm lg:text-base font-medium text-slate-900">
-                          {notif.judul}
-                        </h3>
-                      </div>
-                      <p className="text-xs lg:text-sm text-slate-500 leading-relaxed">
-                        {notif.konten}
-                      </p>
-                      <p className="text-[11px] lg:text-xs text-slate-400 mt-2">
-                        {new Date(notif.tgl_kirim).toLocaleString('id-ID')}
-                      </p>
-                    </div>
+                  <div className="p-12 text-center text-slate-500">
+                    <ShoppingBag className="w-12 h-12 mx-auto mb-4 opacity-20" />
+                    <p>Tidak ada notifikasi Pesanan.</p>
                   </div>
-                ))}
+                ) : (
+                  notifications.map((notif) => (
+                    <div
+                      key={notif.id_notifikasi}
+                      onClick={() =>
+                        !notif.status_dibaca && markAsRead(notif.id_notifikasi)
+                      }
+                      className={`flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors hover:bg-slate-50/50 cursor-pointer ${!notif.status_dibaca ? "bg-orange-50/30" : "bg-white"}`}
+                    >
+                      <div className="flex items-center justify-center w-12 h-12 overflow-hidden border rounded-lg lg:w-16 lg:h-16 bg-slate-100 shrink-0 border-slate-100">
+                        <ShoppingBag className="w-6 h-6 lg:w-8 lg:h-8 text-slate-400" />
+                      </div>
+
+                      <div className="flex-1 space-y-1">
+                        <div className="flex items-center justify-between gap-3 lg:justify-start">
+                          <h3 className="text-sm font-medium lg:text-base text-slate-900">
+                            {notif.judul}
+                          </h3>
+                        </div>
+                        <p className="text-xs leading-relaxed lg:text-sm text-slate-500">
+                          {notif.konten}
+                        </p>
+                        <p className="text-[11px] lg:text-xs text-slate-400 mt-2">
+                          {new Date(notif.tgl_kirim).toLocaleString("id-ID")}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </div>

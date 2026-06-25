@@ -1,7 +1,8 @@
 import { Suspense } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ShoppingBag, MapPin, ChevronRight, Clock } from "lucide-react";
+import Image from "next/image";
+import { ShoppingBag, ChevronRight, Clock } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { ProductActions } from "@/components/explore/ProductActions";
 import { ProductReviews } from "@/components/explore/ProductReviews";
@@ -34,8 +35,8 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
 
   const reviews = await getReviewsBySubToko(product.sub_toko.id_sub_toko);
 
-  const orgName =
-    product.sub_toko?.toko?.organisasi?.nama_organisasi ?? "Organisasi";
+  // const orgName =
+  //   product.sub_toko?.toko?.organisasi?.nama_organisasi ?? "Organisasi";
   const prokerName = product.sub_toko?.nama_proker ?? "Proker";
   const tokoName = product.sub_toko?.toko?.nama_toko ?? "-";
 
@@ -43,43 +44,44 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
   const sellerType = "toko";
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-6 md:px-8 md:py-10">
+    <div className="max-w-5xl px-4 py-6 mx-auto md:px-8 md:py-10">
       {/* Back Button */}
       {/* <Link
         href="/explore"
-        className="fixed top-28 lg:top-20 left-4 md:left-8 z-40 w-12 h-12 bg-white rounded-full shadow-lg border border-slate-200 flex items-center justify-center text-slate-700 hover:text-blue-600 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1 transition-all"
+        className="fixed z-40 flex items-center justify-center w-12 h-12 transition-all bg-white border rounded-full shadow-lg top-28 lg:top-20 left-4 md:left-8 border-slate-200 text-slate-700 hover:text-blue-600 hover:border-blue-300 hover:shadow-xl hover:-translate-y-1"
         title="Kembali"
       >
         <ArrowLeft className="w-6 h-6" />
       </Link> */}
 
       {/* Breadcrumb */}
-      <nav className="flex items-center gap-2 text-sm text-slate-500 mb-6">
-        <Link href="/explore" className="hover:text-blue-600 transition">
+      <nav className="flex items-center gap-2 mb-6 text-sm text-slate-500">
+        <Link href="/explore" className="transition hover:text-blue-600">
           Eksplor
         </Link>
         <ChevronRight className="w-3 h-3" />
-        <Link href="/explore" className="hover:text-blue-600 transition">
+        <Link href="/explore" className="transition hover:text-blue-600">
           {product.kategori ?? "Produk"}
         </Link>
         <ChevronRight className="w-3 h-3" />
-        <span className="text-slate-800 font-medium truncate max-w-50">
+        <span className="font-medium truncate text-slate-800 max-w-50">
           {product.nama_produk}
         </span>
       </nav>
 
       {/* Product Card */}
-      <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-0">
+      <div className="overflow-hidden bg-white border shadow-sm rounded-2xl border-slate-200">
+        <div className="grid grid-cols-1 gap-0 md:grid-cols-2">
           {/* Left Column - Image */}
-          <div className="bg-slate-50 border-b md:border-b-0 md:border-r border-slate-200 p-8 md:pt-12 flex items-start justify-center min-h-75 md:min-h-105">
-            <div className="w-full max-w-70 aspect-square bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col items-center justify-center gap-3 overflow-hidden">
+          <div className="flex items-start justify-center p-8 border-b bg-slate-50 md:border-b-0 md:border-r border-slate-200 md:pt-12 min-h-75 md:min-h-105">
+            <div className="relative flex flex-col items-center justify-center w-full gap-3 overflow-hidden bg-white border shadow-sm max-w-70 aspect-square rounded-xl border-slate-200">
               {product.foto ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
+                <Image
                   src={product.foto}
                   alt={product.nama_produk}
-                  className="w-full h-full object-cover"
+                  fill
+                  className="object-cover"
+                  unoptimized
                 />
               ) : (
                 <>
@@ -93,23 +95,23 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
           </div>
 
           {/* Right Column - Info & Form */}
-          <div className="p-6 md:p-8 flex flex-col">
+          <div className="flex flex-col p-6 md:p-8">
             {/* Badge & Title */}
             <div className="mb-5">
               <div className="flex flex-wrap items-center gap-2 mb-3">
-                {/* <span className="inline-block bg-blue-50 text-blue-600 text-xs font-semibold px-3 py-1 rounded-full">
+                {/* <span className="inline-block px-3 py-1 text-xs font-semibold text-blue-600 rounded-full bg-blue-50">
                   {orgName}
                 </span> */}
-                {/* <span className="bg-slate-100 text-slate-600 text-xs font-medium px-3 py-1 rounded-full flex items-center gap-1">
+                {/* <span className="flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-600">
                   <MapPin className="w-3 h-3" /> {prokerName}
                 </span> */}
                 {product.preorder && (
-                  <span className="bg-orange-100 text-orange-700 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
+                  <span className="flex items-center gap-1 px-3 py-1 text-xs font-bold text-orange-700 bg-orange-100 rounded-full">
                     <Clock className="w-3 h-3" /> Preorder
                   </span>
                 )}
               </div>
-              <h1 className="text-xl md:text-2xl font-bold text-slate-900 leading-snug mt-1">
+              <h1 className="mt-1 text-xl font-bold leading-snug md:text-2xl text-slate-900">
                 {product.nama_produk}
               </h1>
               <div className="flex items-center gap-2 mt-1">
@@ -117,7 +119,7 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
                   Rp {Number(product.harga).toLocaleString("id-ID")}
                 </span>
               </div>
-              <p className="text-sm text-slate-500 mt-2 mb-2">
+              <p className="mt-2 mb-2 text-sm text-slate-500">
                 Stok tersisa:{" "}
                 <span className="font-semibold text-slate-700">
                   {product.stok} item
@@ -127,13 +129,13 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
 
             {/* Description */}
             <div className="mb-5">
-              <h3 className="text-sm font-bold text-slate-800 mb-2">
+              <h3 className="mb-2 text-sm font-bold text-slate-800">
                 📋 Deskripsi Produk
               </h3>
-              <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-line mb-1">
+              <p className="mb-1 text-sm leading-relaxed whitespace-pre-line text-slate-600">
                 {product.deskripsi ?? "Tidak ada deskripsi."}
               </p>
-              <div className="flex flex-wrap gap-2 text-xs mt-2">
+              <div className="flex flex-wrap gap-2 mt-2 text-xs">
                 {product.kategori && (
                   <div className="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-100">
                     <span className="text-slate-500">Kategori: </span>
@@ -151,7 +153,7 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
                 {product.metode_jualan && (
                   <div className="bg-slate-50 rounded-lg px-2 py-1.5 border border-slate-100">
                     <span className="text-slate-500">Metode: </span>
-                    <span className="font-semibold text-slate-800 capitalize">
+                    <span className="font-semibold capitalize text-slate-800">
                       {product.metode_jualan.replace(/,/g, " & ")}
                     </span>
                   </div>
@@ -159,7 +161,7 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
               </div>
             </div>
 
-            <hr className="border-slate-100 mb-5" />
+            <hr className="mb-5 border-slate-100" />
 
             {/* Interactive Part — Client Component */}
             <ProductActions
@@ -192,14 +194,14 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
 export default function ProductDetailPage({ params }: ProductDetailPageProps) {
   return (
     <div className="min-h-screen bg-slate-50">
-      <Navbar />
       <Suspense
         fallback={
-          <div className="max-w-5xl mx-auto px-4 py-20 flex justify-center">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-600"></div>
+          <div className="flex h-screen items-center justify-center max-w-5xl px-4 py-20 mx-auto">
+            <div className="w-8 h-8 border-b-2 rounded-full animate-spin border-primary-600"></div>
           </div>
         }
       >
+        <Navbar />
         <ProductData params={params} />
       </Suspense>
     </div>

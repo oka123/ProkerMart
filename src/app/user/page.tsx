@@ -205,7 +205,7 @@ export default function UserDashboardPage() {
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="lg:flex lg:gap-6">
           {/* Desktop Sidebar */}
           <aside className="hidden lg:block shrink-0">
@@ -218,12 +218,12 @@ export default function UserDashboardPage() {
             <div className="lg:hidden">
               <MobileHeader title="Akun Saya" backHref="/" rightActions={[]} />
               {/* User Header */}
-              <div className="bg-linear-to-br from-primary-600 to-primary-700 p-6 relative overflow-hidden">
+              <div className="relative p-6 overflow-hidden bg-linear-to-br from-primary-600 to-primary-700">
                 <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#fff_1px,transparent_1px)] bg-size-[20px_20px]" />
 
                 <div className="relative z-10 flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 rounded-full border-2 border-white/50 overflow-hidden bg-white/20">
+                    <div className="w-16 h-16 overflow-hidden border-2 rounded-full border-white/50 bg-white/20">
                       <Image
                         src={
                           userData?.foto_profil ||
@@ -233,7 +233,7 @@ export default function UserDashboardPage() {
                         loading="eager"
                         width={200}
                         height={200}
-                        className="w-full h-full object-cover"
+                        className="object-cover w-full h-full"
                         unoptimized
                       />
                     </div>
@@ -261,16 +261,16 @@ export default function UserDashboardPage() {
               </div>
 
               {/* Order Status Section */}
-              <div className="mt-4 px-0">
-                <div className="bg-white p-4">
+              <div className="px-0 mt-4">
+                <div className="p-4 bg-white">
                   <div className="flex items-center justify-between mb-6">
-                    <h3 className="font-medium text-slate-900 flex items-center gap-2">
+                    <h3 className="flex items-center gap-2 font-medium text-slate-900">
                       <ClipboardList className="w-5 h-5 text-primary-600" />
                       Pesanan Saya
                     </h3>
                     <Link
                       href="/user/purchase"
-                      className="text-xs text-slate-400 flex items-center gap-1"
+                      className="flex items-center gap-1 text-xs text-slate-400"
                     >
                       Lihat Riwayat Pesanan <ChevronRight className="w-4 h-4" />
                     </Link>
@@ -313,7 +313,7 @@ export default function UserDashboardPage() {
                         <Link
                           key={item.name}
                           href={item.href}
-                          className="flex items-center justify-between p-4 active:bg-slate-50 transition-colors"
+                          className="flex items-center justify-between p-4 transition-colors active:bg-slate-50"
                         >
                           <div className="flex items-center gap-3">
                             <item.icon className={`w-5 h-5 ${item.color}`} />
@@ -330,15 +330,15 @@ export default function UserDashboardPage() {
               </div>
 
               {/* Logout Button Mobile */}
-              <div className="mt-4 px-4 pb-8">
-                <LogoutButton className="w-full flex items-center justify-center gap-2 py-3 bg-white text-red-500 font-medium rounded-sm border border-red-100 shadow-sm"></LogoutButton>
+              <div className="px-4 pb-8 mt-4">
+                <LogoutButton className="flex items-center justify-center w-full gap-2 py-3 font-medium text-red-500 bg-white border border-red-100 rounded-sm shadow-sm"></LogoutButton>
               </div>
             </div>
 
             {/* --- DESKTOP VIEW --- */}
-            <div className="hidden lg:block h-full">
+            <div className="hidden h-full lg:block">
               <div className="bg-white rounded-sm shadow-sm p-12 flex flex-col items-center justify-center text-center h-full min-h-112.5">
-                <div className="w-32 h-32 rounded-full bg-slate-50 border border-slate-200 overflow-hidden flex items-center justify-center mb-6 relative">
+                <div className="relative flex items-center justify-center w-32 h-32 mb-6 overflow-hidden border rounded-full bg-slate-50 border-slate-200">
                   {userData?.foto_profil ? (
                     <Image
                       src={userData.foto_profil}
@@ -351,35 +351,35 @@ export default function UserDashboardPage() {
                     <User className="w-16 h-16 text-slate-300" />
                   )}
                 </div>
-                <h2 className="text-2xl font-bold text-slate-900 mb-2">
+                <h2 className="mb-2 text-2xl font-bold text-slate-900">
                   Halo, {userData?.nama || "Pengguna"}!
                 </h2>
-                <p className="text-slate-500 max-w-md mx-auto">
+                <p className="max-w-md mx-auto text-slate-500">
                   Selamat datang di dashboard akun Anda. Pilih menu di sebelah
                   kiri untuk mengelola profil, melihat pesanan, atau memeriksa
                   notifikasi Anda.
                 </p>
 
-                <div className="grid grid-cols-2 gap-6 mt-12 w-full max-w-3xl">
+                <div className="grid w-full max-w-3xl grid-cols-2 gap-6 mt-12">
                   <div
-                    className="bg-slate-50 p-6 rounded-sm border border-slate-100 cursor-pointer hover:border-primary-200 transition-colors"
+                    className="p-6 transition-colors border rounded-sm cursor-pointer bg-slate-50 border-slate-100 hover:border-primary-200"
                     onClick={() => router.push("/user/purchase")}
                   >
                     <span className="text-3xl font-bold text-primary-600">
                       {orderCounts.berjalan}
                     </span>
-                    <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
+                    <p className="mt-1 text-xs font-bold tracking-wider uppercase text-slate-500">
                       Pesanan Berjalan
                     </p>
                   </div>
                   <div
-                    className="bg-slate-50 p-6 rounded-sm border border-slate-100 cursor-pointer hover:border-primary-200 transition-colors"
+                    className="p-6 transition-colors border rounded-sm cursor-pointer bg-slate-50 border-slate-100 hover:border-primary-200"
                     onClick={() => router.push("/user/voucher")}
                   >
                     <span className="text-3xl font-bold text-primary-600">
                       {voucherCount}
                     </span>
-                    <p className="text-xs text-slate-500 mt-1 uppercase tracking-wider font-bold">
+                    <p className="mt-1 text-xs font-bold tracking-wider uppercase text-slate-500">
                       Voucher Tersedia
                     </p>
                   </div>

@@ -37,7 +37,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="id" className={`${inter.variable} antialiased`}>
-      <body className="min-h-screen bg-slate-50 text-slate-900 flex flex-col">
+      <body className="flex flex-col min-h-screen bg-slate-50 text-slate-900">
         <PwaRegister />
         {children}
         <Suspense fallback={null}>

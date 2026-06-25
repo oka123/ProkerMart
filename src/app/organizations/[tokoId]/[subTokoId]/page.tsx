@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useParams, useRouter } from "next/navigation";
@@ -5,15 +6,15 @@ import { Suspense, useEffect, useState } from "react";
 import { Navbar } from "@/components/Navbar";
 import {
   ArrowLeft,
-  MapPin,
   Store,
   Package,
   Loader2,
-  Clock,
   Calendar,
+  MessageSquare,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { createBrowserClient } from "@supabase/ssr";
 
 type SubTokoDetail = {
@@ -105,9 +106,9 @@ function SubTokoDetailContent() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="flex flex-col min-h-screen bg-slate-50">
         <Navbar />
-        <div className="flex-1 flex items-center justify-center">
+        <div className="flex items-center justify-center flex-1">
           <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
         </div>
       </div>
@@ -116,19 +117,19 @@ function SubTokoDetailContent() {
 
   if (!subToko) {
     return (
-      <div className="min-h-screen bg-slate-50 flex flex-col">
+      <div className="flex flex-col min-h-screen bg-slate-50">
         <Navbar />
-        <div className="flex-1 flex flex-col items-center justify-center p-4 text-center">
-          <Store className="w-16 h-16 text-slate-300 mb-4" />
-          <h2 className="text-xl font-bold text-slate-900 mb-2">
+        <div className="flex flex-col items-center justify-center flex-1 p-4 text-center">
+          <Store className="w-16 h-16 mb-4 text-slate-300" />
+          <h2 className="mb-2 text-xl font-bold text-slate-900">
             Proker Tidak Ditemukan
           </h2>
-          <p className="text-slate-500 mb-6">
+          <p className="mb-6 text-slate-500">
             Proker yang Anda cari mungkin telah dihapus atau tidak tersedia.
           </p>
           <button
             onClick={() => window.history.back()}
-            className="px-6 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
+            className="px-6 py-2 text-white rounded-lg bg-primary-600 hover:bg-primary-700"
           >
             Kembali
           </button>
@@ -138,83 +139,105 @@ function SubTokoDetailContent() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col pb-20">
+    <div className="flex flex-col min-h-screen pb-20 bg-slate-50">
       <Navbar />
 
       {/* Hero Header */}
       <div className="bg-white border-b border-slate-200">
         {/* Cover Photo */}
-        <div className="h-48 md:h-64 w-full bg-slate-200 relative overflow-hidden">
+        <div className="relative w-full h-48 overflow-hidden md:h-64 bg-slate-200">
           {subToko.fotoSampul ? (
-            <img
+            <Image
               src={subToko.fotoSampul}
               alt={subToko.name}
-              className="w-full h-full object-cover"
+              fill
+              className="object-cover"
+              unoptimized
             />
           ) : (
-            <div className="w-full h-full bg-linear-to-r from-indigo-500 to-purple-600 flex items-center justify-center opacity-80">
+            <div className="flex items-center justify-center w-full h-full bg-linear-to-r from-blue-500 to-gray-400 opacity-80">
               <Store className="w-20 h-20 text-white/30" />
             </div>
           )}
           <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative pb-8">
+        <div className="relative px-4 pb-8 mx-auto -mt-12 max-w-7xl sm:px-6 lg:px-8">
           <button
             onClick={() => window.history.back()}
-            className="inline-flex items-center text-sm font-medium text-white/90 hover:text-white mb-6 drop-shadow-md"
+            className="inline-flex items-center mb-6 text-sm font-medium text-white/90 hover:text-white drop-shadow-md"
           >
             <ArrowLeft className="w-4 h-4 mr-1" />
             Kembali
           </button>
 
-          <div className="bg-white rounded-2xl shadow-xl p-6 md:p-8 border border-slate-100 flex flex-col md:flex-row gap-8">
+          <div className="flex flex-col gap-8 p-6 bg-white border shadow-xl rounded-2xl md:p-8 border-slate-100 md:flex-row md:items-center">
             <div className="flex-1">
-              <div className="inline-block px-3 py-1 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full mb-3">
+              <div className="inline-block px-3 py-1 mb-3 text-xs font-bold text-blue-600 rounded-full bg-blue-50">
                 {subToko.tokoName}
               </div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 mb-4">
+              <h1 className="mb-4 text-3xl font-extrabold md:text-4xl text-slate-900">
                 {subToko.name}
               </h1>
-              <p className="text-slate-600 leading-relaxed max-w-3xl mb-6">
+              <p className="max-w-3xl mb-6 leading-relaxed text-slate-600">
                 {subToko.description}
               </p>
 
-              <div className="flex flex-wrap gap-4 md:gap-8 text-sm">
-                <div className="flex items-center text-slate-700 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                  <Package className="w-5 h-5 text-indigo-500 mr-2" />
+              <div className="flex flex-wrap gap-4 text-sm md:gap-8">
+                <div className="flex items-center px-4 py-2 border rounded-lg text-slate-700 bg-slate-50 border-slate-100">
+                  <Package className="w-5 h-5 mr-2 text-blue-500" />
                   <span className="font-semibold">
                     {subToko.products.length}
                   </span>{" "}
                   &nbsp;Produk
                 </div>
 
-                <div className="flex items-center text-slate-700 bg-slate-50 px-4 py-2 rounded-lg border border-slate-100">
-                  <Calendar className="w-5 h-5 text-emerald-500 mr-2" />
+                <div className="flex items-center px-4 py-2 border rounded-lg text-slate-700 bg-slate-50 border-slate-100">
+                  <Calendar className="w-5 h-5 mr-2 text-emerald-500" />
                   <span className="font-semibold">
                     {subToko.jadwalOperasional}
                   </span>
                 </div>
               </div>
             </div>
+
+            {/* Chat Button */}
+            <div className="flex-none self-start md:self-center">
+              <button
+                onClick={() => {
+                  window.dispatchEvent(
+                    new CustomEvent("openProkerChat", {
+                      detail: {
+                        id_sub_toko: subToko.id,
+                        name: subToko.name,
+                      },
+                    }),
+                  );
+                }}
+                className="flex items-center gap-2 px-6 py-3 font-bold text-white bg-blue-600 rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-md cursor-pointer"
+              >
+                <MessageSquare className="w-5 h-5" />
+                <span>Chat Proker</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 w-full">
+      <main className="w-full px-4 py-12 mx-auto max-w-7xl sm:px-6 lg:px-8">
         {/* Products Grid */}
         <section>
-          <div className="flex items-center justify-between mb-8 border-b border-slate-200 pb-4">
-            <h2 className="text-2xl font-bold text-slate-900 flex items-center gap-2">
-              <Package className="w-6 h-6 text-indigo-600" />
+          <div className="flex items-center justify-between pb-4 mb-8 border-b border-slate-200">
+            <h2 className="flex items-center gap-2 text-2xl font-bold text-slate-900">
+              <Package className="w-6 h-6 text-blue-600" />
               Katalog Produk
             </h2>
           </div>
 
           {subToko.products.length === 0 ? (
-            <div className="bg-white rounded-2xl p-12 border border-slate-200 text-center flex flex-col items-center">
-              <Package className="w-16 h-16 text-slate-200 mb-4" />
-              <h3 className="text-lg font-bold text-slate-900 mb-1">
+            <div className="flex flex-col items-center p-12 text-center bg-white border rounded-2xl border-slate-200">
+              <Package className="w-16 h-16 mb-4 text-slate-200" />
+              <h3 className="mb-1 text-lg font-bold text-slate-900">
                 Belum Ada Produk
               </h3>
               <p className="text-slate-500">
@@ -222,7 +245,7 @@ function SubTokoDetailContent() {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-5 md:gap-6">
               {subToko.products.map((product: any, i: number) => (
                 <motion.div
                   key={product.id_produk}
@@ -234,16 +257,18 @@ function SubTokoDetailContent() {
                     href={`/explore/${product.id_produk}`}
                     className="block group"
                   >
-                    <div className="bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm hover:shadow-xl hover:border-indigo-300 transition-all flex flex-col h-full">
-                      <div className="aspect-square bg-slate-100 relative overflow-hidden shrink-0">
+                    <div className="flex flex-col h-full overflow-hidden transition-all bg-white border shadow-sm rounded-2xl border-slate-200 hover:shadow-xl hover:border-blue-300">
+                      <div className="relative overflow-hidden aspect-square bg-slate-100 shrink-0">
                         {product.foto ? (
-                          <img
+                          <Image
                             src={product.foto}
                             alt={product.nama_produk}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                            fill
+                            className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            unoptimized
                           />
                         ) : (
-                          <div className="w-full h-full flex items-center justify-center text-slate-300">
+                          <div className="flex items-center justify-center w-full h-full text-slate-300">
                             <Package className="w-10 h-10" />
                           </div>
                         )}
@@ -251,14 +276,14 @@ function SubTokoDetailContent() {
                           Stok: {product.stok}
                         </div>
                       </div>
-                      <div className="p-4 flex flex-col flex-1">
-                        <div className="text-[10px] uppercase tracking-wider text-indigo-600 font-bold mb-1">
+                      <div className="flex flex-col flex-1 p-4">
+                        <div className="text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-1">
                           {product.kategori || "Umum"}
                         </div>
-                        <h3 className="text-sm font-medium text-slate-900 mb-2 line-clamp-2 leading-tight group-hover:text-indigo-600 transition-colors flex-1">
+                        <h3 className="flex-1 mb-2 text-sm font-medium leading-tight transition-colors text-slate-900 line-clamp-2 group-hover:text-blue-600">
                           {product.nama_produk}
                         </h3>
-                        <p className="text-lg font-bold text-slate-900 mt-auto">
+                        <p className="mt-auto text-lg font-bold text-slate-900">
                           {new Intl.NumberFormat("id-ID", {
                             style: "currency",
                             currency: "IDR",
@@ -282,8 +307,8 @@ export default function SubTokoDetailPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-slate-50 flex flex-col">
-          <div className="flex-1 flex items-center justify-center">
+        <div className="flex flex-col min-h-screen bg-slate-50">
+          <div className="flex items-center justify-center flex-1">
             <Loader2 className="w-10 h-10 animate-spin text-primary-500" />
           </div>
         </div>

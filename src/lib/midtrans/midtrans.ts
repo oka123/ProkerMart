@@ -1,5 +1,4 @@
-// src/lib/midtrans.ts
-// @ts-ignore
+
 import midtransClient from 'midtrans-client';
 
 export const snap = new midtransClient.Snap({

@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { Store, Calendar, ArrowRight, MapPin, Info } from "lucide-react";
+import Image from "next/image";
+import { Store, Calendar, ArrowRight, MapPin } from "lucide-react";
 import type { SubTokoInfo } from "@/lib/types/product";
 
 interface SellerCardProps {
@@ -9,8 +10,20 @@ interface SellerCardProps {
 }
 
 export function SellerCard({ sellerInfo }: SellerCardProps) {
-  const { id_sub_toko, nama_proker, deskripsi: subDeskripsi, jadwal_operasional, toko } = sellerInfo;
-  const { id_toko, nama_toko, deskripsi: tokoDeskripsi, logo, organisasi } = toko;
+  const {
+    id_sub_toko,
+    nama_proker,
+    deskripsi: subDeskripsi,
+    jadwal_operasional,
+    toko,
+  } = sellerInfo;
+  const {
+    id_toko,
+    nama_toko,
+    deskripsi: tokoDeskripsi,
+    logo,
+    organisasi,
+  } = toko;
   const orgName = organisasi?.nama_organisasi ?? "Organisasi";
 
   // Create links for navigation
@@ -40,14 +53,17 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
           <div>
             <div className="flex items-center gap-3 mb-3">
               {logo ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={logo}
-                  alt={nama_toko}
-                  className="w-12 h-12 rounded-full object-cover border border-slate-200"
-                />
+                <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden relative shrink-0">
+                  <Image
+                    src={logo}
+                    alt={nama_toko}
+                    fill
+                    className="object-cover"
+                    unoptimized
+                  />
+                </div>
               ) : (
-                <div className="w-12 h-12 rounded-full bg-linear-to-tr from-blue-500 to-indigo-600 text-white flex items-center justify-center font-bold text-md border border-slate-200 shadow-xs">
+                <div className="w-12 h-12 rounded-full bg-linear-to-tr from-blue-500 to-blue-600 text-white flex items-center justify-center font-bold text-md border border-slate-200 shadow-xs">
                   {storeInitials}
                 </div>
               )}
@@ -61,7 +77,8 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
               </div>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-4">
-              {tokoDeskripsi ?? "Toko resmi organisasi mahasiswa untuk memasarkan berbagai produk berkualitas."}
+              {tokoDeskripsi ??
+                "Toko resmi organisasi mahasiswa untuk memasarkan berbagai produk berkualitas."}
             </p>
           </div>
 
@@ -91,7 +108,8 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
               </div>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-3">
-              {subDeskripsi ?? "Sub-toko khusus yang menjual barang-barang berkaitan dengan program kerja ini."}
+              {subDeskripsi ??
+                "Sub-toko khusus yang menjual barang-barang berkaitan dengan program kerja ini."}
             </p>
 
             {/* Operational Schedule */}
@@ -99,7 +117,9 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
               <div className="flex items-start gap-1.5 text-[11px] text-slate-600 bg-white/60 border border-slate-100 p-2 rounded-lg mb-4">
                 <Calendar className="w-3.5 h-3.5 text-blue-500 shrink-0 mt-0.5" />
                 <div>
-                  <span className="font-semibold block text-slate-700">Jadwal Operasional:</span>
+                  <span className="font-semibold block text-slate-700">
+                    Jadwal Operasional:
+                  </span>
                   <span>{jadwal_operasional}</span>
                 </div>
               </div>

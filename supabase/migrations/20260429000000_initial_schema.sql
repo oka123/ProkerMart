@@ -7,7 +7,7 @@ CREATE TYPE active_status AS ENUM ('active', 'inactive', 'suspended');
 CREATE TYPE order_status AS ENUM ('menunggu_pembayaran', 'menunggu_konfirmasi', 'diproses', 'siap_diambil', 'selesai', 'dibatalkan');
 CREATE TYPE payment_method AS ENUM ('qris', 'transfer', 'tunai');
 CREATE TYPE payment_status AS ENUM ('menunggu', 'dibayar', 'gagal');
-CREATE TYPE delivery_method AS ENUM ('keliling', 'pickup', 'pre-order');
+CREATE TYPE delivery_method AS ENUM ('delivery', 'pickup');
 
 -- 1. Pengguna
 CREATE TABLE pengguna (

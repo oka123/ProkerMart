@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 
@@ -10,7 +11,7 @@ export async function GET() {
 
     // Melakukan query ringan ke database untuk menjaga koneksi aktif
     // dan mencegah project Supabase ter-pause (mati) karena inaktivitas
-    const { data, error } = await supabase
+    const { error } = await supabase
       .from("produk")
       .select("id_produk")
       .limit(1);
