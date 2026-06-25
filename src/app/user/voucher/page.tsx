@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useState, useEffect } from "react";
-import { Ticket, Search, Clock, Loader2, Info } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Ticket, Clock, Loader2 } from "lucide-react";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
@@ -34,26 +35,33 @@ export default function VoucherPage() {
   const [claimCode, setClaimCode] = useState("");
   const [isClaiming, setIsClaiming] = useState(false);
 
-  const fetchVouchers = async (uid: string) => {
-    const { data, error } = await supabase
-      .from("voucher_pengguna")
-      .select(`
+  const fetchVouchers = useCallback(
+    async (uid: string) => {
+      const { data, error } = await supabase
+        .from("voucher_pengguna")
+        .select(
+          `
         id_klaim,
         status_pakai,
         voucher (*)
-      `)
-      .eq("id_pengguna", uid)
-      .eq("status_pakai", false);
+      `,
+        )
+        .eq("id_pengguna", uid)
+        .eq("status_pakai", false);
 
-    if (!error && data) {
-      setVouchers(data as unknown as VoucherClaim[]);
-    }
-    setIsLoading(false);
-  };
+      if (!error && data) {
+        setVouchers(data as unknown as VoucherClaim[]);
+      }
+      setIsLoading(false);
+    },
+    [supabase],
+  );
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       if (!user) {
         router.push("/auth/login");
         return;
@@ -62,7 +70,7 @@ export default function VoucherPage() {
       fetchVouchers(user.id);
     }
     init();
-  }, [router, supabase]);
+  }, [router, supabase, fetchVouchers]);
 
   const handleClaimVoucher = async () => {
     if (!claimCode.trim()) {
@@ -100,7 +108,8 @@ export default function VoucherPage() {
         });
 
       if (claimErr) {
-        if (claimErr.code === "23505") { // Unique violation
+        if (claimErr.code === "23505") {
+          // Unique violation
           throw new Error("Anda sudah mengklaim voucher ini.");
         }
         throw claimErr;
@@ -130,7 +139,7 @@ export default function VoucherPage() {
         <Navbar />
       </div>
 
-      <main className="flex-1 max-w-7xl mx-auto w-full px-0 md:px-4 lg:px-8 py-0 md:py-6">
+      <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="lg:flex lg:gap-6">
           <aside className="hidden lg:block">
             <UserSidebar />
@@ -144,8 +153,8 @@ export default function VoucherPage() {
             />
 
             <div className="space-y-4">
-              <div className="bg-white p-4 lg:p-8 lg:rounded-sm lg:shadow-sm">
-                <div className="hidden lg:flex items-center justify-center gap-4  w-full">
+              <div className="p-4 bg-white lg:p-8 lg:rounded-sm lg:shadow-sm">
+                <div className="items-center justify-center hidden w-full gap-4 lg:flex">
                   <span className="text-base font-medium whitespace-nowrap">
                     Tambah Voucher
                   </span>
@@ -154,37 +163,41 @@ export default function VoucherPage() {
                     value={claimCode}
                     onChange={(e) => setClaimCode(e.target.value)}
                     placeholder="Masukkan kode voucher"
-                    className="flex-1 border border-slate-200 rounded-sm px-4 py-2 focus:outline-none focus:ring-1 focus:ring-primary-600 uppercase"
+                    className="flex-1 px-4 py-2 uppercase border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                   />
-                  <button 
+                  <button
                     onClick={handleClaimVoucher}
                     disabled={isClaiming || !claimCode}
-                    className="bg-primary-600 text-white px-8 py-2 rounded-sm font-medium hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                    className="flex items-center gap-2 px-8 py-2 font-medium text-white rounded-sm bg-primary-600 hover:bg-primary-700 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {isClaiming && <Loader2 className="w-4 h-4 animate-spin" />}
                     Simpan
                   </button>
                 </div>
 
-                <div className="lg:hidden flex gap-2">
+                <div className="flex gap-2 lg:hidden">
                   <input
                     type="text"
                     value={claimCode}
                     onChange={(e) => setClaimCode(e.target.value)}
                     placeholder="Masukkan kode voucher..."
-                    className="flex-1 border border-slate-200 rounded-sm px-4 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary-600 uppercase"
+                    className="flex-1 px-4 py-2 text-sm uppercase border rounded-sm border-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                   />
-                  <button 
+                  <button
                     onClick={handleClaimVoucher}
                     disabled={isClaiming || !claimCode}
-                    className="bg-primary-600 text-white p-2 rounded-sm disabled:opacity-50"
+                    className="p-2 text-white rounded-sm bg-primary-600 disabled:opacity-50"
                   >
-                    {isClaiming ? <Loader2 className="w-5 h-5 animate-spin" /> : <PlusIcon className="w-5 h-5" />}
+                    {isClaiming ? (
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                    ) : (
+                      <PlusIcon className="w-5 h-5" />
+                    )}
                   </button>
                 </div>
               </div>
 
-              <div className="bg-white lg:rounded-sm lg:shadow-sm overflow-hidden min-h-100">
+              <div className="overflow-hidden bg-white lg:rounded-sm lg:shadow-sm min-h-100">
                 <div className="p-4 lg:p-6">
                   {vouchers.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -192,24 +205,28 @@ export default function VoucherPage() {
                       <p>Belum ada voucher yang disimpan</p>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       {vouchers.map((claim) => {
                         const v = claim.voucher;
-                        const isPerc = v.tipe_diskon === "persentase";
                         return (
                           <div
                             key={claim.id_klaim}
-                            className="flex border border-slate-100 rounded-sm shadow-sm hover:shadow-md transition-shadow group relative overflow-hidden h-30 lg:h-35"
+                            className="relative flex overflow-hidden transition-shadow border rounded-sm shadow-sm border-slate-100 hover:shadow-md group h-30 lg:h-35"
                           >
-                            <div className={`bg-blue-600 w-24 lg:w-32 flex flex-col items-center justify-center text-white shrink-0 relative overflow-hidden`}>
-                              <div className="absolute left-0 top-0 bottom-0 flex flex-col justify-between py-1">
+                            <div
+                              className={`bg-blue-600 w-24 lg:w-32 flex flex-col items-center justify-center text-white shrink-0 relative overflow-hidden`}
+                            >
+                              <div className="absolute top-0 bottom-0 left-0 flex flex-col justify-between py-1">
                                 {Array.from({ length: 12 }).map((_, i) => (
-                                  <div key={i} className="w-1 h-1 bg-[#f5f5f5] rounded-full -ml-0.5"></div>
+                                  <div
+                                    key={i}
+                                    className="w-1 h-1 bg-[#f5f5f5] rounded-full -ml-0.5"
+                                  ></div>
                                 ))}
                               </div>
 
-                              <div className="z-10 flex flex-col items-center text-center px-1">
-                                <div className="w-10 h-10 bg-white/20 rounded-sm flex items-center justify-center mb-1">
+                              <div className="z-10 flex flex-col items-center px-1 text-center">
+                                <div className="flex items-center justify-center w-10 h-10 mb-1 rounded-sm bg-white/20">
                                   <Ticket className="w-6 h-6 text-white" />
                                 </div>
                                 <span className="text-[8px] lg:text-[10px] font-bold leading-tight uppercase">
@@ -221,16 +238,17 @@ export default function VoucherPage() {
                               </div>
                             </div>
 
-                            <div className="flex-1 bg-white p-3 lg:p-4 flex flex-col justify-between relative">
+                            <div className="relative flex flex-col justify-between flex-1 p-3 bg-white lg:p-4">
                               <div className="space-y-1">
-                                <h3 className="text-sm lg:text-base font-medium text-slate-800 line-clamp-1">
+                                <h3 className="text-sm font-medium lg:text-base text-slate-800 line-clamp-1">
                                   {v.nama_voucher}
                                 </h3>
                                 <p className="text-[11px] lg:text-xs text-slate-500 line-clamp-1">
                                   {v.deskripsi}
                                 </p>
                                 <p className="text-[11px] lg:text-xs text-slate-500 font-medium mt-1">
-                                  Min. Belanja Rp {v.min_belanja.toLocaleString('id-ID')}
+                                  Min. Belanja Rp{" "}
+                                  {v.min_belanja.toLocaleString("id-ID")}
                                 </p>
                               </div>
 
@@ -238,7 +256,12 @@ export default function VoucherPage() {
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-1 text-[10px] lg:text-[11px] text-slate-400">
                                     <Clock className="w-3 h-3" />
-                                    <span>s.d {new Date(v.tgl_berakhir).toLocaleDateString('id-ID')}</span>
+                                    <span>
+                                      s.d{" "}
+                                      {new Date(
+                                        v.tgl_berakhir,
+                                      ).toLocaleDateString("id-ID")}
+                                    </span>
                                   </div>
                                 </div>
                                 <button className="border border-primary-600 text-primary-600 text-[10px] lg:text-xs font-medium px-3 py-1 rounded-sm hover:bg-primary-50 transition-colors">

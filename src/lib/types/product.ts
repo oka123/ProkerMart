@@ -3,10 +3,14 @@
 export interface SubTokoInfo {
   id_sub_toko: string;
   nama_proker: string;
+  deskripsi: string | null;
+  foto_sampul: string | null;
   jadwal_operasional: string | null;
   toko: {
     id_toko: string;
     nama_toko: string;
+    deskripsi: string | null;
+    logo: string | null;
     organisasi: {
       id_organisasi: string;
       nama_organisasi: string;

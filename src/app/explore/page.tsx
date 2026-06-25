@@ -11,7 +11,7 @@ export const metadata = {
 // via the /api/products route with infinite scroll.
 export default function ExplorePage() {
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       <Navbar />
       <ExploreClient />
     </div>

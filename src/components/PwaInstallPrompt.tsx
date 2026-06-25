@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -20,7 +21,9 @@ export function PwaInstallPrompt() {
     const dismissedTime = localStorage.getItem("pwa-prompt-dismissed");
     const now = Date.now();
     if (dismissedTime && now - parseInt(dismissedTime, 10) < cooldown) {
-      setShowPrompt(false);
+      queueMicrotask(() => {
+        setShowPrompt(false);
+      });
     }
   }, [pathname, cooldown]);
 
@@ -59,14 +62,17 @@ export function PwaInstallPrompt() {
     // Event listener for Android/Desktop install prompt
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      
+
       // Double check cooldown before showing
       const latestDismissedTime = localStorage.getItem("pwa-prompt-dismissed");
       const currentNow = Date.now();
-      if (latestDismissedTime && currentNow - parseInt(latestDismissedTime, 10) < cooldown) {
+      if (
+        latestDismissedTime &&
+        currentNow - parseInt(latestDismissedTime, 10) < cooldown
+      ) {
         return;
       }
-      
+
       setDeferredPrompt(e);
       setShowPrompt(true);
     };
@@ -77,9 +83,14 @@ export function PwaInstallPrompt() {
     if (iosDevice) {
       const timer = setTimeout(() => {
         // Double check cooldown before showing
-        const latestDismissedTime = localStorage.getItem("pwa-prompt-dismissed");
+        const latestDismissedTime = localStorage.getItem(
+          "pwa-prompt-dismissed",
+        );
         const currentNow = Date.now();
-        if (latestDismissedTime && currentNow - parseInt(latestDismissedTime, 10) < cooldown) {
+        if (
+          latestDismissedTime &&
+          currentNow - parseInt(latestDismissedTime, 10) < cooldown
+        ) {
           return;
         }
         setShowPrompt(true);
@@ -90,7 +101,7 @@ export function PwaInstallPrompt() {
     return () => {
       window.removeEventListener(
         "beforeinstallprompt",
-        handleBeforeInstallPrompt
+        handleBeforeInstallPrompt,
       );
     };
   }, [cooldown]);
@@ -122,7 +133,7 @@ export function PwaInstallPrompt() {
           className="fixed bottom-6 left-4 right-4 md:left-auto md:right-6 md:w-96 z-50 bg-white rounded-2xl shadow-2xl border border-slate-150 p-5 overflow-hidden"
         >
           {/* Top colored accent bar */}
-          <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-blue-500 to-indigo-600" />
+          <div className="absolute top-0 left-0 right-0 h-1.5 bg-linear-to-r from-blue-500 to-blue-600" />
 
           <div className="flex justify-between items-start mb-3">
             <div className="flex items-center gap-3">

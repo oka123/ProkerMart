@@ -53,16 +53,16 @@ export default function LoginPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
+    <div className="flex flex-col min-h-screen bg-slate-50">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 w-full">
-        <div className="text-center max-w-3xl mx-auto mb-16">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-slate-100 text-slate-600 text-sm font-medium mb-4">
+      <main className="flex-1 w-full px-4 py-16 mx-auto max-w-7xl sm:px-6 lg:px-8">
+        <div className="max-w-3xl mx-auto mb-16 text-center">
+          <div className="inline-flex items-center gap-2 px-3 py-1 mb-4 text-sm font-medium rounded-full bg-slate-100 text-slate-600">
             <ShieldCheck className="w-4 h-4 text-primary-600" />
             Simulasi Role / Peran
           </div>
-          <h1 className="text-3xl md:text-5xl font-extrabold text-slate-900 mb-4">
+          <h1 className="mb-4 text-3xl font-extrabold md:text-5xl text-slate-900">
             Pilih Peran Anda
           </h1>
           <p className="text-lg text-slate-600">
@@ -72,7 +72,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid max-w-6xl gap-6 mx-auto md:grid-cols-3">
           {roles.map((role, i) => {
             const Icon = role.icon;
             return (
@@ -81,30 +81,39 @@ export default function LoginPage() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.4, delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 border border-slate-200 hover:border-slate-300 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all flex flex-col relative overflow-hidden"
+                className="relative flex flex-col p-8 overflow-hidden transition-all bg-white border shadow-sm rounded-3xl border-slate-200 hover:border-slate-300 hover:shadow-xl hover:-translate-y-1"
               >
                 {/* Decorative top gradient */}
-                <div className={`absolute top-0 left-0 w-full h-2 bg-linear-to-r ${role.color}`}></div>
-                
-                <div className={`w-16 h-16 rounded-2xl ${role.bgColor} ${role.textColor} flex items-center justify-center mb-6`}>
+                <div
+                  className={`absolute top-0 left-0 w-full h-2 bg-linear-to-r ${role.color}`}
+                ></div>
+
+                <div
+                  className={`w-16 h-16 rounded-2xl ${role.bgColor} ${role.textColor} flex items-center justify-center mb-6`}
+                >
                   <Icon className="w-8 h-8" />
                 </div>
 
-                <h2 className="text-2xl font-bold text-slate-900 mb-3">
+                <h2 className="mb-3 text-2xl font-bold text-slate-900">
                   {role.title}
                 </h2>
-                <p className="text-slate-600 mb-6 flex-1 line-clamp-3">
+                <p className="flex-1 mb-6 text-slate-600 line-clamp-3">
                   {role.description}
                 </p>
 
                 <div className="mb-8">
-                  <h3 className="text-sm font-bold text-slate-900 mb-3 uppercase tracking-wider">
+                  <h3 className="mb-3 text-sm font-bold tracking-wider uppercase text-slate-900">
                     Akses Utama:
                   </h3>
                   <ul className="space-y-2">
                     {role.features.map((feature, idx) => (
-                      <li key={idx} className="flex items-center gap-2 text-sm text-slate-600">
-                        <div className={`w-1.5 h-1.5 rounded-full bg-linear-to-r ${role.color}`}></div>
+                      <li
+                        key={idx}
+                        className="flex items-center gap-2 text-sm text-slate-600"
+                      >
+                        <div
+                          className={`w-1.5 h-1.5 rounded-full bg-linear-to-r ${role.color}`}
+                        ></div>
                         {feature}
                       </li>
                     ))}

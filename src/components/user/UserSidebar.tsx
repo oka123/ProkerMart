@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Package, Bell, Ticket, PencilLine, LogOut } from "lucide-react";
+import { User, Package, Bell, Ticket, PencilLine } from "lucide-react";
 import Image from "next/image";
 import { LogoutButton } from "../logout-button";
 import { useEffect, useState } from "react";
@@ -159,7 +159,7 @@ export function UserSidebar() {
         </nav>
 
         <div className="pt-4 border-t border-slate-100">
-          <LogoutButton className="flex w-full items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-left" />
+          <LogoutButton className="flex w-full bg-white items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors cursor-pointer text-left" />
         </div>
       </div>
     </aside>

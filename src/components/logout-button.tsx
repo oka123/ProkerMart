@@ -19,3 +19,9 @@ export function LogoutButton({ className }: { className?: string }) {
     </Button>
   );
 }
+
+export async function logout() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  window.location.href = "/auth/login";
+}

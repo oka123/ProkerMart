@@ -32,12 +32,6 @@ export function Logo({
   };
 
   // Applies CSS filters to change image color based on theme
-  const iconThemeClasses = {
-    light: "",
-    dark: "",
-    blue: "",
-    white: "brightness-0 invert drop-shadow-sm", // Makes the SVG completely white
-  };
 
   // Styles for the "ProkerMart" text
   const textSizeClasses = {

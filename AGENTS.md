@@ -62,7 +62,7 @@ The database uses PostgreSQL (via Supabase) with the following key tables:
    - **All UI must be responsive (mobile-first, tablet, desktop)**
 3. **Modular Architecture & Project Structure**:
    - Maintain a clean, decoupled folder structure. Avoid bloated monolithic files. Component size should ideally not exceed **300 lines of code**.
-4. **Database Operations**: Always refer to `supabase/migrations/20260429000000_initial_schema.sql` for table structures before writing queries.
+4. **Database Operations**: Always check the live database structure directly via the Supabase MCP server (e.g. using `list_tables` and `execute_sql` to query `information_schema.columns`) instead of just relying on migration files, as the actual live database schema might contain manual adjustments or updates not reflected in local SQL files.
 5. **Environment Variables**: Access Supabase credentials securely using `process.env.NEXT_PUBLIC_SUPABASE_URL` and `process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`.
 6. **Error Handling**: Every Supabase fetch, insert, or mutation must be wrapped in structured `try-catch` blocks. Log error metrics cleanly using a prefix identifier: `console.error("[Module - Action] Error:", error);`.
 7. **Next.js 16**: Be aware of potential breaking changes compared to older versions (13/14/15).

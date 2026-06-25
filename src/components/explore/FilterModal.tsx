@@ -64,7 +64,9 @@ export function FilterModal({
   // Sync state when modal opens
   useEffect(() => {
     if (isOpen) {
-      setValues(initialValues);
+      queueMicrotask(() => {
+        setValues(initialValues);
+      });
       document.body.style.overflow = "hidden";
     } else {
       document.body.style.overflow = "auto";
@@ -72,8 +74,7 @@ export function FilterModal({
     return () => {
       document.body.style.overflow = "auto";
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen]);
+  }, [isOpen, initialValues]);
 
   const toggleMetode = (m: string) =>
     setValues((v) => ({

@@ -1,28 +1,23 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Link from "next/link";
-import {
-  ShoppingCart,
-  Search,
-  User,
-  Menu,
-  MessageSquare,
-  LogOut,
-} from "lucide-react";
+import { usePathname } from "next/navigation";
+import { ShoppingCart, Search, User, Menu, MessageSquare } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Logo } from "./Logo";
 import { MobileHeader } from "./MobileHeader";
 import { createClient } from "@/lib/supabase/client";
 import { getCartItems } from "@/lib/supabase/queries/cart";
-
-
+import { logout } from "./logout-button";
 
 interface NavbarProps {
   variant?: "default" | "cart";
 }
 
 export function Navbar({ variant = "default" }: NavbarProps) {
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
@@ -35,8 +30,9 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     const fetchCartCount = async () => {
       try {
         const items = await getCartItems();
+
         // Menjumlahkan berdasarkan properti 'jumlah'
-        const total = items.reduce((sum, item) => sum + item.jumlah, 0);
+        const total = items.length;
         setCartCount(total);
       } catch (error) {
         console.error("Gagal mengambil jumlah keranjang:", error);
@@ -44,6 +40,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
     };
 
     fetchCartCount();
+
+    window.addEventListener("cart-updated", fetchCartCount);
+    return () => {
+      window.removeEventListener("cart-updated", fetchCartCount);
+    };
   }, []);
 
   useEffect(() => {
@@ -114,10 +115,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
 
   return (
     <nav
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${isScrolled
-        ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
-        : "bg-white border-b border-slate-200 shadow-sm"
-        }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        isScrolled
+          ? "backdrop-blur-md bg-white/80 border-b border-slate-200/60 shadow-md"
+          : "bg-white border-b border-slate-200 shadow-sm"
+      }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -130,13 +132,21 @@ export function Navbar({ variant = "default" }: NavbarProps) {
           <div className="hidden md:flex items-center space-x-8">
             <Link
               href="/explore"
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className={`${
+                pathname.startsWith("/explore")
+                  ? "text-primary-600 font-semibold"
+                  : "text-slate-600 hover:text-primary-600 font-medium"
+              } transition-colors`}
             >
-              Eksplor
+              Explore
             </Link>
             <Link
               href="/organizations"
-              className="text-slate-600 hover:text-primary-600 font-medium transition-colors"
+              className={`${
+                pathname.startsWith("/organizations")
+                  ? "text-primary-600 font-semibold"
+                  : "text-slate-600 hover:text-primary-600 font-medium"
+              } transition-colors`}
             >
               Organisasi
             </Link>
@@ -183,18 +193,24 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                         >
                           <Link
                             href="/user"
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-primary-600"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
                             Akun Saya
                           </Link>
                           <Link
                             href="/user/purchase"
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50"
+                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-primary-600"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
                             Pesanan Saya
                           </Link>
+                          <button
+                            onClick={logout}
+                            className="flex w-full items-center gap-3 px-4 py-2 text-sm text-red-600 hover:bg-red-50"
+                          >
+                            Logout
+                          </button>
                         </motion.div>
                       )}
                     </AnimatePresence>
@@ -268,7 +284,7 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               {!loading && user ? (
                 <Link
                   href="/user"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold text-primary-600 active:bg-primary-100 transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold  active:bg-primary-100 transition-colors"
                   onClick={() => setIsMobileMenuOpen(false)}
                 >
                   <User className="w-5 h-5" />
@@ -285,14 +301,22 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               )}
               <Link
                 href="/explore"
-                className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                className={`block px-4 py-2 rounded-md text-base ${
+                  pathname.startsWith("/explore")
+                    ? "font-semibold text-primary-600 bg-slate-50"
+                    : "font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
-                Produk
+                Explore
               </Link>
               <Link
                 href="/organizations"
-                className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                className={`block px-4 py-2 rounded-md text-base ${
+                  pathname.startsWith("/organizations")
+                    ? "font-semibold text-primary-600 bg-slate-50"
+                    : "font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                }`}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 Organisasi

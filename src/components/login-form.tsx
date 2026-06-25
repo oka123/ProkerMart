@@ -1,13 +1,18 @@
-"use client";
+﻿"use client";
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
-export function LoginForm() {
+/** Inner component that reads searchParams — must be inside <Suspense> */
+function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
+  const searchParams = useSearchParams();
+  const redirect = redirectTo ?? searchParams.get("redirect");
+  const destination = redirect ? decodeURIComponent(redirect) : "/";
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -22,16 +27,11 @@ export function LoginForm() {
     const supabase = createClient();
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
       if (error) throw error;
-      router.push("/");
+      router.push(destination);
     } catch (err: unknown) {
-      setError(
-        err instanceof Error ? err.message : "Email atau password salah.",
-      );
+      setError(err instanceof Error ? err.message : "Email atau password salah.");
     } finally {
       setIsLoading(false);
     }
@@ -39,29 +39,14 @@ export function LoginForm() {
 
   return (
     <div className="w-full">
-      {/* Logo */}
       <Logo className="mb-8" />
-
-      {/* Heading */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-slate-900 mb-2">
-          Selamat Datang
-        </h1>
-        <p className="text-slate-500">
-          Masuk ke akun ProkerMart Anda untuk melanjutkan.
-        </p>
+        <h1 className="text-3xl font-bold text-slate-900 mb-2">Selamat Datang</h1>
+        <p className="text-slate-500">Masuk ke akun ProkerMart Anda untuk melanjutkan.</p>
       </div>
-
-      {/* Form */}
       <form onSubmit={handleLogin} className="flex flex-col gap-5">
-        {/* Email Field */}
         <div>
-          <label
-            htmlFor="email"
-            className="block text-sm font-medium text-slate-700 mb-1.5"
-          >
-            Email
-          </label>
+          <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
           <input
             id="email"
             type="email"
@@ -72,20 +57,10 @@ export function LoginForm() {
             className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
           />
         </div>
-
-        {/* Password Field */}
         <div>
           <div className="flex items-center justify-between mb-1.5">
-            <label
-              htmlFor="password"
-              className="block text-sm font-medium text-slate-700"
-            >
-              Password
-            </label>
-            <Link
-              href="/auth/forgot-password"
-              className="text-xs font-medium text-primary-600 hover:text-primary-700"
-            >
+            <label htmlFor="password" className="block text-sm font-medium text-slate-700">Password</label>
+            <Link href="/auth/forgot-password" className="text-xs font-medium text-primary-600 hover:text-primary-700">
               Lupa password?
             </Link>
           </div>
@@ -104,23 +79,15 @@ export function LoginForm() {
               onClick={() => setShowPassword(!showPassword)}
               className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
             >
-              {showPassword ? (
-                <EyeOff className="w-5 h-5" />
-              ) : (
-                <Eye className="w-5 h-5" />
-              )}
+              {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
             </button>
           </div>
         </div>
-
-        {/* Error Message */}
         {error && (
           <div className="p-3 rounded-xl bg-red-50 border border-red-200">
             <p className="text-sm text-red-600">{error}</p>
           </div>
         )}
-
-        {/* Submit Button */}
         <button
           type="submit"
           id="submit-login"
@@ -132,30 +99,29 @@ export function LoginForm() {
               <Loader2 className="w-5 h-5 animate-spin" />
               Masuk...
             </>
-          ) : (
-            "Masuk"
-          )}
+          ) : "Masuk"}
         </button>
-
-        {/* Sign-up link */}
         <p className="text-center text-sm text-slate-500">
           Belum punya akun?{" "}
-          <Link
-            href="/auth/sign-up"
-            className="font-semibold text-primary-600 hover:text-primary-700"
-          >
+          <Link href="/auth/sign-up" className="font-semibold text-primary-600 hover:text-primary-700">
             Daftar sekarang
           </Link>
         </p>
         <p className="text-center text-sm text-slate-500">
-          <Link
-            href="/login-bypass"
-            className="font-semibold text-primary-600 hover:text-primary-700"
-          >
+          <Link href="/login-bypass" className="font-semibold text-primary-600 hover:text-primary-700">
             Login Bypass
           </Link>
         </p>
       </form>
     </div>
+  );
+}
+
+/** Public export: wraps inner component in Suspense so useSearchParams works in static pages */
+export function LoginForm({ redirectTo }: { redirectTo?: string } = {}) {
+  return (
+    <Suspense fallback={<div className="w-full animate-pulse h-96 bg-slate-100 rounded-xl" />}>
+      <LoginFormInner redirectTo={redirectTo} />
+    </Suspense>
   );
 }

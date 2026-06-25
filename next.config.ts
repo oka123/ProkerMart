@@ -16,13 +16,23 @@ console.log("Local IPs:", localIPs);
 
 const nextConfig: NextConfig = {
   cacheComponents: true,
-  allowedDevOrigins: [...localIPs, "localhost"],
+  allowedDevOrigins: [
+    ...localIPs,
+    "localhost",
+    "subarytenoidal-ronna-nondeistically.ngrok-free.dev",
+  ],
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [
       {
         protocol: "https",
         hostname: "placehold.co",
+        port: "",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "api.dicebear.com",
         port: "",
         pathname: "/**",
       },

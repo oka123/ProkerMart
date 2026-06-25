@@ -145,8 +145,10 @@ export function ExploreClient() {
     filtersRef.current = filters;
     pageRef.current = 1;
     hasMoreRef.current = true;
-    setIsInitialLoad(true);
-    fetchPage(1, filters, false);
+    queueMicrotask(() => {
+      setIsInitialLoad(true);
+      fetchPage(1, filters, false);
+    });
   }, [activeCategory, searchQuery, activeSort, appliedFilters, fetchPage]);
 
   // ── Infinite scroll sentinel ───────────────────────────────────────────────

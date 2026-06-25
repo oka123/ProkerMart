@@ -10,7 +10,9 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
-import { useState } from "react";
+import Image from "next/image";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { addToCart } from "@/lib/supabase/queries/cart";
 import type { Product } from "@/lib/types/product";
 
@@ -35,11 +37,19 @@ interface ProductCardProps {
 }
 
 export function ProductCard({ product, index }: ProductCardProps) {
+  const router = useRouter();
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
-  const [notificationError, setNotificationError] = useState<string | null>(
-    null,
-  );
+  const [notificationError, setNotificationError] = useState<string | null>(null);
+  const [isLoggedIn, setIsLoggedIn] = useState(true);
+
+  useEffect(() => {
+    import("@/lib/supabase/client").then(({ createClient }) => {
+      createClient()
+        .auth.getUser()
+        .then(({ data: { user } }) => setIsLoggedIn(!!user));
+    });
+  }, []);
 
   const tag = getProductTag(product.metode_jualan);
   const orgName = product.sub_toko?.toko?.organisasi?.nama_organisasi ?? "-";
@@ -47,6 +57,11 @@ export function ProductCard({ product, index }: ProductCardProps) {
 
   const handleAddToCart = async (e: React.MouseEvent) => {
     e.preventDefault();
+    if (!isLoggedIn) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     if (product.stok <= 0) return;
 
     setIsAddingToCart(true);
@@ -57,6 +72,7 @@ export function ProductCard({ product, index }: ProductCardProps) {
     setIsAddingToCart(false);
 
     if (result.success) {
+      window.dispatchEvent(new Event("cart-updated"));
       setShowNotification(true);
       setNotificationError(null);
       setTimeout(() => setShowNotification(false), 3000);
@@ -78,11 +94,12 @@ export function ProductCard({ product, index }: ProductCardProps) {
           {/* Image */}
           <div className="aspect-square bg-slate-100 relative overflow-hidden flex items-center justify-center">
             {product.foto ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
+              <Image
                 src={product.foto}
                 alt={product.nama_produk}
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                fill
+                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                unoptimized
               />
             ) : (
               <ShoppingBag className="w-12 h-12 text-slate-300 group-hover:scale-110 transition-transform duration-500" />
@@ -137,14 +154,16 @@ export function ProductCard({ product, index }: ProductCardProps) {
 
       {/* Success Toast Notification */}
       {showNotification && (
-        <Link href="/cart">
-          <div className="fixed bottom-8 right-8 z-50 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
-            <CheckCircle className="w-5 h-5 text-emerald-400" />
-            <span className="font-semibold text-sm">
-              {product.nama_produk} ditambahkan ke keranjang!
-            </span>
-          </div>
-        </Link>
+        <div className="fixed bottom-8 right-8 z-110">
+          <Link href="/cart">
+            <div className="bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4 hover:scale-105 transition-transform cursor-pointer">
+              <CheckCircle className="w-5 h-5 text-emerald-400" />
+              <span className="font-semibold text-sm">
+                {product.nama_produk} ditambahkan ke keranjang!
+              </span>
+            </div>
+          </Link>
+        </div>
       )}
 
       {/* Error Toast Notification */}

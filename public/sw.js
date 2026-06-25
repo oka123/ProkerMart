@@ -3,15 +3,15 @@
 // The fetch event listener is kept active (performing direct network pass-through)
 // to satisfy PWA installation criteria in the browser.
 
-const CACHE_NAME = "prokermart-cache-v1";
-const ASSETS_TO_CACHE = [
-  "/",
-  "/site.webmanifest",
-  "/favicon/web-app-manifest-192x192.png",
-  "/favicon/web-app-manifest-512x512.png",
-];
+// const CACHE_NAME = "prokermart-cache-v1";
+// const ASSETS_TO_CACHE = [
+//   "/",
+//   "/site.webmanifest",
+//   "/favicon/web-app-manifest-192x192.png",
+//   "/favicon/web-app-manifest-512x512.png",
+// ];
 
-self.addEventListener("install", (event) => {
+self.addEventListener("install", () => {
   /* PRODUCTION ONLY:
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -22,7 +22,7 @@ self.addEventListener("install", (event) => {
   self.skipWaiting();
 });
 
-self.addEventListener("activate", (event) => {
+self.addEventListener("activate", () => {
   /* PRODUCTION ONLY:
   event.waitUntil(
     caches.keys().then((cacheNames) => {
@@ -39,7 +39,7 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
-self.addEventListener("fetch", (event) => {
+self.addEventListener("fetch", () => {
   /* DEVELOPMENT ONLY: (Comment out or remove the return statement below in production to enable caching) */
   // Pass-through all requests directly to the network in development mode.
   // This satisfies PWA install requirements while ensuring hot-reloads and new code are served instantly.

@@ -16,9 +16,11 @@ export interface CartItem {
     foto: string | null;
     kategori: string | null;
     status_aktif: boolean;
+    metode_jualan: string;
     sub_toko: {
       id_sub_toko: string;
       nama_proker: string;
+      alamat: string | null;
       toko: {
         id_toko: string;
         nama_toko: string;
@@ -46,9 +48,11 @@ const CART_SELECT = `
     foto,
     kategori,
     status_aktif,
+    metode_jualan,
     sub_toko (
       id_sub_toko,
       nama_proker,
+      alamat,
       toko (
         id_toko,
         nama_toko,
@@ -214,6 +218,32 @@ export async function removeFromCart(
     return { success: true };
   } catch (err) {
     console.error("[Cart - removeFromCart] Unexpected error:", err);
+    return { success: false, error: "Terjadi kesalahan tak terduga" };
+  }
+}
+
+/**
+ * Remove multiple items from the cart.
+ */
+export async function removeMultipleFromCart(
+  cartIds: string[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const supabase = createClient();
+
+    const { error } = await supabase
+      .from("keranjang")
+      .delete()
+      .in("id_keranjang", cartIds);
+
+    if (error) {
+      console.error("[Cart - removeMultipleFromCart] Error:", error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (err) {
+    console.error("[Cart - removeMultipleFromCart] Unexpected error:", err);
     return { success: false, error: "Terjadi kesalahan tak terduga" };
   }
 }

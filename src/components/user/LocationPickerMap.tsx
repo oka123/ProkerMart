@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 
@@ -32,12 +32,19 @@ export default function LocationPickerMap({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<L.Map | null>(null);
   const markerRef = useRef<L.Marker | null>(null);
+  const [initLat] = useState(initialLocation.lat);
+  const [initLng] = useState(initialLocation.lng);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     if (!mapContainerRef.current || mapInstanceRef.current) return;
 
     const map = L.map(mapContainerRef.current, {
-      center: [initialLocation.lat, initialLocation.lng],
+      center: [initLat, initLng],
       zoom: 16,
       zoomControl: true,
     });
@@ -45,27 +52,27 @@ export default function LocationPickerMap({
     mapInstanceRef.current = map;
 
     L.tileLayer("https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-      attribution: 'Google Maps'
+      attribution: "Google Maps",
     }).addTo(map);
 
-    const marker = L.marker([initialLocation.lat, initialLocation.lng], {
+    const marker = L.marker([initLat, initLng], {
       icon: customIcon,
       draggable: true,
     }).addTo(map);
-    
+
     markerRef.current = marker;
 
     // Handle marker drag
     marker.on("dragend", () => {
       const pos = marker.getLatLng();
-      onChange({ lat: pos.lat, lng: pos.lng });
+      onChangeRef.current({ lat: pos.lat, lng: pos.lng });
     });
 
     // Handle map click
     map.on("click", (e: L.LeafletMouseEvent) => {
       const pos = e.latlng;
       marker.setLatLng(pos);
-      onChange({ lat: pos.lat, lng: pos.lng });
+      onChangeRef.current({ lat: pos.lat, lng: pos.lng });
     });
 
     return () => {
@@ -73,8 +80,7 @@ export default function LocationPickerMap({
       mapInstanceRef.current = null;
       markerRef.current = null;
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [initLat, initLng]);
 
   // Sync marker and map when initialLocation changes significantly (like from GPS button)
   useEffect(() => {
@@ -82,10 +88,16 @@ export default function LocationPickerMap({
       const currentPos = markerRef.current.getLatLng();
       // Only flyTo and setLatLng if the new location is different from the marker's current position
       // This prevents resetting the map while the user is actively dragging
-      if (Math.abs(currentPos.lat - initialLocation.lat) > 0.0001 || 
-          Math.abs(currentPos.lng - initialLocation.lng) > 0.0001) {
+      if (
+        Math.abs(currentPos.lat - initialLocation.lat) > 0.0001 ||
+        Math.abs(currentPos.lng - initialLocation.lng) > 0.0001
+      ) {
         markerRef.current.setLatLng([initialLocation.lat, initialLocation.lng]);
-        mapInstanceRef.current.flyTo([initialLocation.lat, initialLocation.lng], 16, { animate: true });
+        mapInstanceRef.current.flyTo(
+          [initialLocation.lat, initialLocation.lng],
+          16,
+          { animate: true },
+        );
       }
     }
   }, [initialLocation.lat, initialLocation.lng]);
