@@ -2,14 +2,16 @@
 
 import { createClient } from "@/lib/supabase/client";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useState, Suspense } from "react";
 import { User, Building2, Eye, EyeOff, Loader2 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 
 type Role = "pembeli" | "organisasi";
 
-export function SignUpForm() {
+function SignUpFormInner() {
+  const searchParams = useSearchParams();
+  const redirectAfter = searchParams.get("redirect") ?? null;
   const [role, setRole] = useState<Role>("pembeli");
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
@@ -38,11 +40,16 @@ export function SignUpForm() {
     const supabase = createClient();
 
     try {
+      const confirmBase = `${window.location.origin}/auth/confirm`;
+      const emailRedirectTo = redirectAfter
+        ? `${confirmBase}?next=${encodeURIComponent(redirectAfter)}`
+        : confirmBase;
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo,
           data: {
             full_name: fullName,
             role: role,
@@ -272,5 +279,13 @@ export function SignUpForm() {
         </p>
       </form>
     </div>
+  );
+}
+
+export function SignUpForm() {
+  return (
+    <Suspense fallback={<div className="w-full animate-pulse h-96 bg-slate-100 rounded-xl" />}>
+      <SignUpFormInner />
+    </Suspense>
   );
 }

@@ -7,6 +7,7 @@ import {
   Minus, Plus, ShoppingBag, Lock, MoreVertical, Trash2, X, Loader2, ClipboardList, Wifi, WifiOff,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboard } from "@/lib/context/DashboardContext";
 
 const ROLE_DISPLAY: Record<string, string> = {
   KetuaProker: "Ketua Proker",
@@ -19,12 +20,23 @@ const ROLE_DISPLAY: Record<string, string> = {
 };
 
 const INVITABLE_BY: Record<string, string[]> = {
-  KetuaProker: ["WakilProker", "BendaharaProker", "SekretarisProker", "KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
-  WakilProker: ["WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
-  BendaharaProker: ["WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
-  SekretarisProker: ["WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  KetuaProker: ["WakilProker", "SekretarisProker", "BendaharaProker", "KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  WakilProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  SekretarisProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  BendaharaProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
   KoorPenggalianDana: ["WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
   WakilKoorPenggalianDana: ["AnggotaPenggalianDana"],
+  AnggotaPenggalianDana: [],
+};
+
+// Roles a user can assign when editing another member's role (WakilKoor cannot edit roles)
+const EDITABLE_ROLES_BY: Record<string, string[]> = {
+  KetuaProker: ["WakilProker", "SekretarisProker", "BendaharaProker", "KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  WakilProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  SekretarisProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  BendaharaProker: ["KoorPenggalianDana", "WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  KoorPenggalianDana: ["WakilKoorPenggalianDana", "AnggotaPenggalianDana"],
+  WakilKoorPenggalianDana: [],
   AnggotaPenggalianDana: [],
 };
 
@@ -125,11 +137,12 @@ type CombinedEntry = RekapEntry | OnlinePesananEntry;
 
 export default function TeamPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { active } = useDashboard();
 
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [currentIdSubToko, setCurrentIdSubToko] = useState<string | null>(null);
+  const currentUserRole = active?.role ?? null;
+  const currentIdSubToko = active?.id_sub_toko ?? null;
+  const currentIdMember = active?.id_member ?? null;
   const [currentIdPengguna, setCurrentIdPengguna] = useState<string | null>(null);
-  const [currentIdMember, setCurrentIdMember] = useState<string | null>(null);
   const [loadingRole, setLoadingRole] = useState(true);
   const [members, setMembers] = useState<Member[]>([]);
   const [loadingMembers, setLoadingMembers] = useState(true);
@@ -140,7 +153,7 @@ export default function TeamPage() {
   const [targetPerMinggu, setTargetPerMinggu] = useState(3);
 
   const [showInviteModal, setShowInviteModal] = useState(false);
-  const [inviteMember, setInviteMember] = useState({ name: "", email: "", role: "" });
+  const [inviteMember, setInviteMember] = useState({ email: "", role: "" });
   const [inviteStatus, setInviteStatus] = useState<string | null>(null);
   const [isSendingInvite, setIsSendingInvite] = useState(false);
 
@@ -162,6 +175,7 @@ export default function TeamPage() {
   const [loadingViewRekap, setLoadingViewRekap] = useState(false);
 
   const invitableRoles = currentUserRole ? (INVITABLE_BY[currentUserRole] ?? []) : [];
+  const editableRoles = currentUserRole ? (EDITABLE_ROLES_BY[currentUserRole] ?? []) : [];
   const canAddMember = invitableRoles.length > 0;
   const canSetTarget = currentUserRole ? CAN_SET_TARGET.includes(currentUserRole) : false;
   const canLogSales = currentUserRole ? CAN_LOG_SALES.includes(currentUserRole) : false;
@@ -169,6 +183,10 @@ export default function TeamPage() {
   const canManageMember = useCallback((memberRole: string) => {
     return invitableRoles.includes(memberRole);
   }, [invitableRoles]);
+
+  const canEditMemberRole = useCallback((memberRole: string) => {
+    return editableRoles.includes(memberRole);
+  }, [editableRoles]);
 
   const fetchRekapCounts = useCallback(async (idSubToko: string): Promise<{ daily: Record<string, number>; weekly: Record<string, number> }> => {
     const weekStart = getWeekStart();
@@ -222,35 +240,24 @@ export default function TeamPage() {
   }, [supabase, fetchRekapCounts]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const user = session?.user;
-      if (!user) { setLoadingRole(false); return; }
-      setCurrentIdPengguna(user.id);
-
-      const { data } = await supabase
-        .from("sub_toko_member")
-        .select("id_member, role, id_sub_toko")
-        .eq("id_pengguna", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      setLoadingRole(false);
-      if (!data) { setLoadingMembers(false); return; }
-      setCurrentUserRole(data.role);
-      setCurrentIdSubToko(data.id_sub_toko);
-      setCurrentIdMember(data.id_member);
-      fetchMembers(data.id_sub_toko);
-
-      // Fetch active products for this sub_toko
-      const { data: produkData } = await supabase
-        .from("produk")
-        .select("id_produk, nama_produk, harga, kategori")
-        .eq("id_sub_toko", data.id_sub_toko)
-        .eq("status_aktif", true)
-        .order("nama_produk");
-      setProdukList(produkData ?? []);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) setCurrentIdPengguna(session.user.id);
     });
-  }, [fetchMembers, supabase]);
+  }, [supabase]);
+
+  useEffect(() => {
+    setLoadingRole(false);
+    if (!currentIdSubToko) { setLoadingMembers(false); return; }
+    fetchMembers(currentIdSubToko);
+
+    supabase
+      .from("produk")
+      .select("id_produk, nama_produk, harga, kategori")
+      .eq("id_sub_toko", currentIdSubToko)
+      .eq("status_aktif", true)
+      .order("nama_produk")
+      .then(({ data }) => setProdukList(data ?? []));
+  }, [currentIdSubToko, fetchMembers, supabase]);
 
   const handleSendInvite = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -261,12 +268,12 @@ export default function TeamPage() {
       const res = await fetch("/api/invitations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(inviteMember),
+        body: JSON.stringify({ ...inviteMember, id_sub_toko: currentIdSubToko }),
       });
       const result = await res.json();
       if (!res.ok) { setInviteStatus(result.error || "Gagal mengirim undangan."); return; }
       setInviteStatus("Undangan berhasil dikirim.");
-      setInviteMember({ name: "", email: "", role: "" });
+      setInviteMember({ email: "", role: "" });
       setShowInviteModal(false);
     } catch (err) {
       setInviteStatus(err instanceof Error ? err.message : "Terjadi kesalahan.");
@@ -406,6 +413,18 @@ export default function TeamPage() {
 
       if (error) throw error;
 
+      // Decrement stock for offline sale
+      const jumlah = parseInt(rekapForm.jumlah_item) || 1;
+      const { data: decremented, error: stockError } = await supabase.rpc("decrement_stock", {
+        p_id_produk: rekapForm.id_produk,
+        p_jumlah: jumlah,
+      });
+      if (stockError) {
+        console.error("[TeamPage - handleSubmitRekap] Gagal update stok:", stockError.message);
+      } else if (!decremented) {
+        console.warn("[TeamPage - handleSubmitRekap] Stok tidak cukup untuk produk:", rekapForm.id_produk);
+      }
+
       // Update local count
       setMembers((prev) =>
         prev.map((m) =>
@@ -469,20 +488,14 @@ export default function TeamPage() {
                     <X className="w-5 h-5" />
                   </button>
                 </div>
-                <form onSubmit={handleSendInvite} className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-2">Nama Lengkap</label>
-                    <input type="text" value={inviteMember.name} onChange={(e) => setInviteMember({ ...inviteMember, name: e.target.value })}
-                      className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-500"
-                      placeholder="Contoh: Putu Adi" required />
-                  </div>
+                <form onSubmit={handleSendInvite} className="flex flex-col gap-4">
                   <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-2">Email Undangan</label>
                     <input type="email" value={inviteMember.email} onChange={(e) => setInviteMember({ ...inviteMember, email: e.target.value })}
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="contoh@kampus.ac.id" required />
                   </div>
-                  <div className="sm:col-span-2">
+                  <div>
                     <label className="block text-xs font-semibold text-slate-500 mb-2">Jabatan</label>
                     <select value={inviteMember.role} onChange={(e) => setInviteMember({ ...inviteMember, role: e.target.value })}
                       className="w-full rounded-2xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-500 bg-white" required>
@@ -490,7 +503,7 @@ export default function TeamPage() {
                       {invitableRoles.map((v) => <option key={v} value={v}>{ROLE_DISPLAY[v] ?? v}</option>)}
                     </select>
                   </div>
-                  <div className="sm:col-span-2 flex justify-end gap-3 mt-2">
+                  <div className="flex justify-end gap-3 mt-2">
                     <button type="button" onClick={() => setShowInviteModal(false)}
                       className="rounded-2xl border border-slate-300 px-5 py-3 text-sm text-slate-700 hover:bg-slate-50">Batal</button>
                     <button type="submit" disabled={isSendingInvite}
@@ -526,7 +539,7 @@ export default function TeamPage() {
               <select value={newRole} onChange={(e) => setNewRole(e.target.value)}
                 className="w-full rounded-xl border border-slate-300 px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-primary-500 bg-white mb-4">
                 <option value="" disabled>Pilih jabatan baru</option>
-                {invitableRoles.map((v) => <option key={v} value={v}>{ROLE_DISPLAY[v] ?? v}</option>)}
+                {editableRoles.map((v) => <option key={v} value={v}>{ROLE_DISPLAY[v] ?? v}</option>)}
               </select>
               <div className="flex gap-3 justify-end">
                 <button onClick={() => setEditRoleModal(null)}
@@ -920,12 +933,14 @@ export default function TeamPage() {
                             transition={{ duration: 0.12 }}
                             className="absolute right-0 top-8 w-44 bg-white rounded-xl shadow-xl border border-slate-100 py-1 z-20"
                           >
-                            <button
-                              onClick={() => { setEditRoleModal({ id_member: member.id_member, currentRole: member.role }); setNewRole(""); setActiveMenuId(null); }}
-                              className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
-                            >
-                              <UserCog className="w-4 h-4 text-slate-400" /> Ubah Jabatan
-                            </button>
+                            {canEditMemberRole(member.role) && (
+                              <button
+                                onClick={() => { setEditRoleModal({ id_member: member.id_member, currentRole: member.role }); setNewRole(""); setActiveMenuId(null); }}
+                                className="flex items-center gap-3 w-full px-4 py-2.5 text-sm text-slate-700 hover:bg-slate-50"
+                              >
+                                <UserCog className="w-4 h-4 text-slate-400" /> Ubah Jabatan
+                              </button>
+                            )}
                             <button
                               onClick={() => handleRemoveMember(member.id_member)}
                               disabled={isRemoving === member.id_member}

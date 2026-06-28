@@ -16,6 +16,7 @@ import {
   ChevronRight,
   X,
   Loader2,
+  Navigation,
 } from "lucide-react";
 import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
@@ -24,6 +25,10 @@ import { createClient } from "@/lib/supabase/client";
 import { useRouter, useParams } from "next/navigation";
 import Link from "next/link";
 import Script from "next/script";
+import dynamic from "next/dynamic";
+
+const QRCode = dynamic(() => import("qrcode.react").then(m => m.QRCodeSVG), { ssr: false });
+const TrackingMap = dynamic(() => import("@/components/delivery/TrackingMap"), { ssr: false });
 
 interface OrderDetail {
   id_pesanan: string;
@@ -109,6 +114,8 @@ function OrderDetailContent() {
 
   const [order, setOrder] = useState<OrderDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [trackingPos, setTrackingPos] = useState<{ lat: number; lng: number; updatedAt: string | null } | null>(null);
+  const [pengantar, setPengantar] = useState<{ nama: string; no_telepon: string | null } | null>(null);
 
   // Rating Modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -322,6 +329,44 @@ function OrderDetailContent() {
       });
     }
   }, [id, fetchOrderDetail]);
+
+  // Fetch initial tracking position + realtime when dikirim
+  useEffect(() => {
+    if (!order?.id_pesanan || order.status_pesanan !== "dikirim") return;
+
+    supabase
+      .from("pesanan")
+      .select("lat_pengantar, lng_pengantar, lokasi_updated_at, pengantar_id")
+      .eq("id_pesanan", order.id_pesanan)
+      .single()
+      .then(async ({ data }) => {
+        if (data?.lat_pengantar && data?.lng_pengantar) {
+          setTrackingPos({ lat: data.lat_pengantar, lng: data.lng_pengantar, updatedAt: data.lokasi_updated_at });
+        }
+        if (data?.pengantar_id) {
+          const { data: memberData } = await supabase
+            .from("sub_toko_member")
+            .select("pengguna:id_pengguna(nama, no_telepon)")
+            .eq("id_member", data.pengantar_id)
+            .maybeSingle();
+          const p = memberData?.pengguna as any;
+          if (p?.nama) setPengantar({ nama: p.nama, no_telepon: p.no_telepon ?? null });
+        }
+      });
+
+    const channel = supabase
+      .channel(`track-inline:${order.id_pesanan}`)
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "pesanan", filter: `id_pesanan=eq.${order.id_pesanan}` }, (payload) => {
+        const row = payload.new as any;
+        if (row.status_pesanan === "selesai") { fetchOrderDetail(); return; }
+        if (row.lat_pengantar && row.lng_pengantar) {
+          setTrackingPos({ lat: row.lat_pengantar, lng: row.lng_pengantar, updatedAt: row.lokasi_updated_at });
+        }
+      })
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [order?.id_pesanan, order?.status_pesanan, supabase, fetchOrderDetail]);
 
   const handleCancelOrder = async () => {
     if (!order) return;
@@ -701,6 +746,31 @@ function OrderDetailContent() {
               </div>
             )}
 
+            {/* Live tracking map — fixed above address when dikirim */}
+            {order.status_pesanan === "dikirim" && order.metode_pengambilan !== "pickup" && (
+              <div className="bg-white border-t-2 shadow-sm md:rounded-sm border-sky-500">
+                <div className="flex items-center gap-2 px-4 pt-4 pb-2 text-sm font-semibold text-sky-700">
+                  <Truck className="w-4 h-4" />
+                  {pengantar ? `${pengantar.nama} sedang dalam perjalanan` : "Panitia sedang dalam perjalanan"}
+                </div>
+                <div className="h-56 mx-4 mb-1 rounded-xl overflow-hidden border border-slate-200">
+                  {trackingPos ? (
+                    <TrackingMap lat={trackingPos.lat} lng={trackingPos.lng} updatedAt={trackingPos.updatedAt} mapId={`inline-track-${order.id_pesanan}`} />
+                  ) : (
+                    <div className="h-full flex flex-col items-center justify-center gap-2 bg-slate-50 text-slate-400 text-sm">
+                      <Navigation className="w-6 h-6 animate-pulse" />
+                      <span>Menunggu lokasi panitia...</span>
+                    </div>
+                  )}
+                </div>
+                {trackingPos?.updatedAt && (
+                  <p className="text-[10px] text-slate-400 px-4 pb-3 text-right">
+                    Update: {new Date(trackingPos.updatedAt).toLocaleTimeString("id-ID")}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Address Section */}
             {order.metode_pengambilan !== "pickup" && (
               <div className="relative bg-white border-t-2 shadow-sm md:rounded-sm border-primary-600">
@@ -720,19 +790,41 @@ function OrderDetailContent() {
                     </div>
                   </div>
 
-                  {/* Logic: "ketika status pesanan dikirim atau siap diambil hanya tampilkan alamat saja tanpa pelacakan pesanan" */}
-                  {/* {(order.status_pesanan === "dikirim" ||
-                    order.status_pesanan === "siap_diambil") && (
-                    <div className="pt-4 text-sm border-t md:w-1/3 md:border-t-0 md:border-l border-slate-100 md:pt-0 md:pl-6">
-                      <p className="mb-1 font-bold text-emerald-600">
-                        Pesanan Dalam Pengiriman
-                      </p>
-                      <p className="text-slate-500">
-                        Pelacakan logistik tidak tersedia untuk metode ini.
-                        Silakan hubungi penjual jika pesanan belum tiba.
-                      </p>
-                    </div>
-                  )} */}
+                </div>
+              </div>
+            )}
+
+            {/* Delivery person info */}
+            {order.status_pesanan === "dikirim" && pengantar && (
+              <div className="bg-white border-t shadow-sm md:rounded-sm px-4 py-4">
+                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Detail Pengirim</p>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-sky-100 flex items-center justify-center text-sky-600 font-bold text-sm shrink-0">
+                    {pengantar.nama.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-semibold text-slate-800">{pengantar.nama}</p>
+                    {pengantar.no_telepon ? (
+                      <a
+                        href={`tel:${pengantar.no_telepon}`}
+                        className="text-xs text-primary-600 hover:underline"
+                      >
+                        {pengantar.no_telepon}
+                      </a>
+                    ) : (
+                      <p className="text-xs text-slate-400">Nomor tidak tersedia</p>
+                    )}
+                  </div>
+                  {pengantar.no_telepon && (
+                    <a
+                      href={`https://wa.me/${pengantar.no_telepon.replace(/\D/g, "")}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 text-xs font-semibold rounded-lg border border-emerald-200 transition-colors"
+                    >
+                      WhatsApp
+                    </a>
+                  )}
                 </div>
               </div>
             )}
@@ -768,6 +860,46 @@ function OrderDetailContent() {
                   key={group.subToko.id_sub_toko}
                   className="border-b last:border-b-0 border-slate-100"
                 >
+                  {/* QR + pickup info — both above store header */}
+                  {order.status_pesanan === "siap_diambil" &&
+                    group.items.some((i: any) => i.metode_pengambilan === "pickup" || i.metode_pengambilan === "both") && (() => {
+                      const pickupItem = group.items.find((i: any) => i.metode_pengambilan === "pickup" || i.metode_pengambilan === "both");
+                      return (
+                        <div className="mx-4 mt-4 mb-0 space-y-3">
+                          {/* Pickup info */}
+                          {pickupItem && (
+                            <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm">
+                              <p className="font-semibold text-slate-700 mb-1.5">📍 Info Pick Up</p>
+                              <p className="text-slate-500">
+                                <span className="font-medium text-slate-600">Lokasi Stand: </span>
+                                {pickupItem.alamat_pengambilan || "Stand Toko, Gedung A Lt.1"}
+                              </p>
+                              {pickupItem.tgl_ambil && (
+                                <p className="text-slate-500">
+                                  <span className="font-medium text-slate-600">Waktu Ambil: </span>
+                                  {pickupItem.tgl_ambil}
+                                </p>
+                              )}
+                            </div>
+                          )}
+                          {/* QR code */}
+                          <div className="bg-emerald-50 border border-emerald-200 rounded-2xl p-5">
+                            <p className="text-xs font-bold uppercase tracking-wider text-emerald-700 mb-4">Tunjukkan ke Panitia saat Ambil</p>
+                            <div className="flex flex-col sm:flex-row items-center gap-6">
+                              <div className="bg-white p-3 rounded-xl border border-emerald-200 shadow-sm shrink-0">
+                                <QRCode value={order.kode_unik} size={120} />
+                              </div>
+                              <div className="flex-1 text-center sm:text-left">
+                                <p className="text-xs text-slate-500 mb-1">Kode Pesanan</p>
+                                <p className="font-mono font-extrabold text-2xl text-slate-900 tracking-widest mb-2">{order.kode_unik}</p>
+                                <p className="text-xs text-slate-400">Tunjukkan QR atau sebutkan kode ini kepada panitia</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+
                   <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-slate-50/10">
                     <div
                       className="flex items-center gap-2 text-sm font-bold cursor-pointer text-slate-800"
@@ -834,21 +966,6 @@ function OrderDetailContent() {
                           <p className="mt-1 text-xs text-slate-600">
                             x{item.quantity}
                           </p>
-                          {item.metode_pengambilan === "pickup" && (
-                            <div className="mt-2 text-xs bg-slate-50 border border-slate-200 rounded-lg p-2 max-w-lg">
-                              <p className="text-slate-600 font-semibold">
-                                📍 Info Pick Up:
-                              </p>
-                              <p className="text-slate-500 mt-0.5">
-                                Lokasi Stand:{" "}
-                                {item.alamat_pengambilan ||
-                                  "Stand Toko, Gedung A Lt.1"}
-                              </p>
-                              <p className="text-slate-500">
-                                Waktu Ambil: {item.tgl_ambil || "-"}
-                              </p>
-                            </div>
-                          )}
                         </div>
                         <div className="flex flex-col justify-start text-right">
                           <span className="text-sm font-medium text-primary-600">
@@ -1007,12 +1124,6 @@ function OrderDetailContent() {
                       className="flex-1 md:flex-none px-6 py-2.5 border border-slate-300 text-slate-700 font-medium rounded hover:bg-slate-50 transition-colors flex items-center justify-center gap-2"
                     >
                       Hubungi Penjual
-                    </button>
-                    <button
-                      onClick={handleCompleteOrder}
-                      className="flex-1 md:flex-none px-6 py-2.5 bg-primary-600 text-white font-medium rounded hover:bg-primary-700 shadow-md transition-colors"
-                    >
-                      Pesanan Selesai
                     </button>
                   </>
                 )}

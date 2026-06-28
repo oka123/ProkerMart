@@ -61,11 +61,26 @@ export function SwitchRoleButton({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const CACHE_KEY = "switch_role_access";
+    const cached = sessionStorage.getItem(CACHE_KEY);
+    if (cached) {
+      try {
+        const { hasOrganisasi, hasProker } = JSON.parse(cached);
+        setOptions(buildOptions(hasOrganisasi, hasProker, currentRoute));
+        setLoading(false);
+        return;
+      } catch {}
+    }
+
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       const access = await fetchUserAccess(supabase, user.email!);
       if (!access) return;
+      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+        hasOrganisasi: access.hasOrganisasi,
+        hasProker: access.hasProker,
+      }));
       setOptions(buildOptions(access.hasOrganisasi, access.hasProker, currentRoute));
       setLoading(false);
     });
@@ -111,12 +126,9 @@ export function SwitchRoleButton({
                 </div>
 
                 <div className="flex flex-col gap-2">
-                  {options.map((option, i) => (
-                    <motion.button
+                  {options.map((option) => (
+                    <button
                       key={option.route}
-                      initial={{ opacity: 0, x: -12 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.06 }}
                       onClick={(e) => {
                         e.stopPropagation();
                         console.log("[SwitchRole] option clicked at", e.clientX, e.clientY, "route:", option.route);
@@ -124,7 +136,7 @@ export function SwitchRoleButton({
                         onNavigate?.();
                         router.push(option.route);
                       }}
-                      className="flex items-center gap-4 p-3.5 text-left rounded-xl border border-slate-100 hover:border-primary-200 hover:bg-primary-50 transition-all group"
+                      className="flex items-center gap-4 p-3.5 text-left rounded-xl border border-slate-100 hover:border-primary-200 hover:bg-primary-50 transition-all group w-full"
                     >
                       <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-500 group-hover:bg-primary-100 group-hover:text-primary-600 transition-colors flex-shrink-0">
                         {option.icon}
@@ -135,7 +147,7 @@ export function SwitchRoleButton({
                         </p>
                         <p className="text-xs text-slate-500">{option.description}</p>
                       </div>
-                    </motion.button>
+                    </button>
                   ))}
                 </div>
               </motion.div>

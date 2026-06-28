@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Store, Truck, Loader2, Star, X } from "lucide-react";
+import { Search, Store, Truck, Loader2, Star, X, Timer, MessageCircle } from "lucide-react";
 import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
@@ -34,9 +34,10 @@ interface Order {
   id: string;
   storeName: string;
   storeId: string;
-  status: string; // Internal DB status
-  statusLabel: string; // UI Tab Label
+  status: string;
+  statusLabel: string;
   statusText: string;
+  tgl_pesan: string;
   items: OrderItem[];
   totalPrice: number;
   isRated: boolean;
@@ -104,6 +105,7 @@ export default function PurchasePage() {
   const [activeTab, setActiveTab] = useState("Semua");
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [tick, setTick] = useState(0);
 
   // Rating Modal states
   const [showRatingModal, setShowRatingModal] = useState(false);
@@ -132,6 +134,7 @@ export default function PurchasePage() {
           kode_unik,
           total_harga,
           status_pesanan,
+          tgl_pesan,
           snap_token,
           sub_toko (
             id_toko,
@@ -204,6 +207,7 @@ export default function PurchasePage() {
             status: p.status_pesanan,
             statusLabel: mapStatusToTab(p.status_pesanan),
             statusText: statusText,
+            tgl_pesan: p.tgl_pesan,
             totalPrice: p.total_harga,
             snap_token: p.snap_token,
             isRated: p.ulasan && p.ulasan.length > 0,
@@ -232,6 +236,11 @@ export default function PurchasePage() {
       fetchOrders();
     });
   }, [fetchOrders]);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   const handleCancelOrder = async (orderId: string, kodeUnik: string) => {
     if (!confirm("Apakah Anda yakin ingin membatalkan pesanan ini?")) return;
@@ -429,6 +438,9 @@ export default function PurchasePage() {
     }
     return kode_unik;
   };
+
+  // tick forces re-render every second for countdowns
+  void tick;
 
   const processedOrders = useMemo(() => {
     const unpaidGroups: Record<string, Order> = {};
@@ -748,17 +760,33 @@ export default function PurchasePage() {
                               >
                                 Hubungi Penjual
                               </button>
-                              <button
-                                onClick={() =>
-                                  handleCompleteOrder(order.id_pesanan)
-                                }
-                                className="flex-1 px-4 py-2 text-xs font-medium text-white rounded-sm shadow-md sm:flex-none bg-primary-600 sm:text-sm hover:bg-primary-700 whitespace-nowrap"
-                              >
-                                Pesanan Diterima
-                              </button>
                             </>
                           ) : order.statusLabel === "Sedang Dikemas" ? (
                             <>
+                              {order.status === "menunggu_konfirmasi" && (() => {
+                                const elapsed = Math.floor((Date.now() - new Date(order.tgl_pesan).getTime()) / 1000);
+                                const remaining = 10 - elapsed;
+                                if (remaining > 0) {
+                                  return (
+                                    <button
+                                      onClick={() => handleCancelOrder(order.id_pesanan, order.id)}
+                                      className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-red-300 text-red-600 sm:text-sm hover:bg-red-50 whitespace-nowrap flex items-center justify-center gap-1.5"
+                                    >
+                                      <Timer className="w-3.5 h-3.5" /> Batalkan ({remaining}d)
+                                    </button>
+                                  );
+                                }
+                                return (
+                                  <a
+                                    href="https://wa.me/6281234567890"
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-slate-200 text-slate-600 sm:text-sm hover:bg-slate-50 whitespace-nowrap flex items-center justify-center gap-1.5"
+                                  >
+                                    <MessageCircle className="w-3.5 h-3.5" /> Hubungi CS
+                                  </a>
+                                );
+                              })()}
                               <button
                                 onClick={() =>
                                   handleOpenChat(order.storeId, order.storeName)
