@@ -1,9 +1,10 @@
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Download, TrendingUp, BarChart3, ShoppingBag, Wifi, WifiOff, Loader2, Calendar } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Download, TrendingUp, BarChart3, ShoppingBag, Wifi, WifiOff, Loader2, Calendar, Wallet, X, CreditCard, Clock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboard } from "@/lib/context/DashboardContext";
 
 type RangeKey = "1d" | "1w" | "1m" | "3m" | "6m";
 
@@ -111,9 +112,19 @@ interface TopProduct {
   totalOmzet: number;
 }
 
+interface Penarikan {
+  id: string;
+  jumlah: number;
+  nama_bank: string;
+  no_rekening: string;
+  nama_pemilik: string;
+  tgl_tarik: string;
+}
+
 export default function ReportsPage() {
   const supabase = useMemo(() => createClient(), []);
-  const [subTokoId, setSubTokoId] = useState<string | null>(null);
+  const { active } = useDashboard();
+  const subTokoId = active?.id_sub_toko ?? null;
   const [initialLoading, setInitialLoading] = useState(true);
   const [dataLoading, setDataLoading] = useState(false);
   const [range, setRange] = useState<RangeKey>("1m");
@@ -123,6 +134,63 @@ export default function ReportsPage() {
   });
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   const [chartBuckets, setChartBuckets] = useState(buildChartBuckets("1m"));
+  const [penarikanList, setPenarikanList] = useState<Penarikan[]>([]);
+  const [totalDitarik, setTotalDitarik] = useState(0);
+  const [allTimeOmzet, setAllTimeOmzet] = useState(0);
+  const [showModal, setShowModal] = useState(false);
+  const [withdrawLoading, setWithdrawLoading] = useState(false);
+  const [form, setForm] = useState({ jumlah: "", nama_bank: "", no_rekening: "", nama_pemilik: "" });
+  const [formError, setFormError] = useState("");
+
+  const fetchSaldo = useCallback(async (stId: string) => {
+    try {
+      const [omzetOnlineRes, omzetOfflineRes, penarikanRes] = await Promise.all([
+        supabase.from("pesanan").select("total_harga").eq("id_sub_toko", stId).eq("status_pesanan", "selesai"),
+        supabase.from("rekap_jualan_offline").select("total_harga").eq("id_sub_toko", stId),
+        supabase.from("penarikan_saldo").select("*").eq("id_sub_toko", stId).order("tgl_tarik", { ascending: false }),
+      ]);
+      const omzet = (omzetOnlineRes.data ?? []).reduce((s: number, p: any) => s + Number(p.total_harga), 0)
+        + (omzetOfflineRes.data ?? []).reduce((s: number, r: any) => s + Number(r.total_harga), 0);
+      const ditarik = (penarikanRes.data ?? []).reduce((s: number, p: any) => s + Number(p.jumlah), 0);
+      setAllTimeOmzet(omzet);
+      setTotalDitarik(ditarik);
+      setPenarikanList(penarikanRes.data ?? []);
+    } catch (err) {
+      console.error("[ReportsPage - fetchSaldo] Error:", err);
+    }
+  }, [supabase]);
+
+  const handleWithdraw = async () => {
+    if (!subTokoId) return;
+    const jumlah = Number(form.jumlah);
+    const saldo = allTimeOmzet - totalDitarik;
+    if (!jumlah || jumlah <= 0) { setFormError("Nominal harus lebih dari 0."); return; }
+    if (jumlah > saldo) { setFormError("Nominal melebihi saldo tersedia."); return; }
+    if (!form.nama_bank.trim() || !form.no_rekening.trim() || !form.nama_pemilik.trim()) {
+      setFormError("Lengkapi semua data rekening.");
+      return;
+    }
+    setFormError("");
+    setWithdrawLoading(true);
+    try {
+      const { error } = await supabase.from("penarikan_saldo").insert({
+        id_sub_toko: subTokoId,
+        jumlah,
+        nama_bank: form.nama_bank.trim(),
+        no_rekening: form.no_rekening.trim(),
+        nama_pemilik: form.nama_pemilik.trim(),
+      });
+      if (error) throw error;
+      setShowModal(false);
+      setForm({ jumlah: "", nama_bank: "", no_rekening: "", nama_pemilik: "" });
+      await fetchSaldo(subTokoId);
+    } catch (err) {
+      console.error("[ReportsPage - handleWithdraw] Error:", err);
+      setFormError("Gagal menyimpan penarikan. Coba lagi.");
+    } finally {
+      setWithdrawLoading(false);
+    }
+  };
 
   const fetchData = useCallback(async (stId: string, rangeKey: RangeKey) => {
     setDataLoading(true);
@@ -206,24 +274,12 @@ export default function ReportsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) { setInitialLoading(false); return; }
-      const { data: memberData } = await supabase
-        .from("sub_toko_member")
-        .select("id_sub_toko")
-        .eq("id_pengguna", session.user.id)
-        .eq("status", "active")
-        .maybeSingle();
-      setInitialLoading(false);
-      if (!memberData) return;
-      setSubTokoId(memberData.id_sub_toko);
-      fetchData(memberData.id_sub_toko, range);
-    });
-  }, [supabase, fetchData, range]);
-
-  useEffect(() => {
-    if (subTokoId) fetchData(subTokoId, range);
-  }, [range, subTokoId, fetchData]);
+    setInitialLoading(false);
+    if (subTokoId) {
+      fetchData(subTokoId, range);
+      fetchSaldo(subTokoId);
+    }
+  }, [subTokoId, range, fetchData, fetchSaldo]);
 
   const totalOmzet = summary.omzetOnline + summary.omzetOffline;
   const maxChart = Math.max(...chartBuckets.map((b) => b.online + b.offline), 1);
@@ -284,6 +340,138 @@ export default function ReportsPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Saldo & Penarikan */}
+      <div className="grid md:grid-cols-2 gap-4">
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-gradient-to-br from-primary-600 to-primary-700 p-6 rounded-2xl shadow-sm text-white flex items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 mb-1">
+              <Wallet className="w-4 h-4 opacity-80" />
+              <p className="text-sm opacity-80">Saldo Tersedia</p>
+            </div>
+            <p className="text-2xl font-black">Rp {(allTimeOmzet - totalDitarik).toLocaleString("id-ID")}</p>
+            <p className="text-xs opacity-60 mt-0.5">Total omzet – sudah ditarik</p>
+          </div>
+          <button
+            onClick={() => { setShowModal(true); setFormError(""); }}
+            className="shrink-0 bg-white text-primary-700 hover:bg-primary-50 font-bold text-sm px-4 py-2.5 rounded-xl transition-colors"
+          >
+            Tarik Uang
+          </button>
+        </motion.div>
+
+        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }}
+          className="bg-white border border-slate-200 p-6 rounded-2xl shadow-sm">
+          <div className="flex items-center gap-2 mb-4">
+            <Clock className="w-4 h-4 text-slate-400" />
+            <p className="text-sm font-bold text-slate-700">Riwayat Penarikan</p>
+          </div>
+          {penarikanList.length === 0 ? (
+            <p className="text-sm text-slate-400 text-center py-4">Belum ada penarikan.</p>
+          ) : (
+            <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+              {penarikanList.map((p) => (
+                <div key={p.id} className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">Rp {Number(p.jumlah).toLocaleString("id-ID")}</p>
+                    <p className="text-[10px] text-slate-400">{p.nama_bank} · {p.no_rekening} · {p.nama_pemilik}</p>
+                  </div>
+                  <div className="text-right shrink-0 ml-2">
+                    <span className="text-[10px] bg-emerald-100 text-emerald-700 font-bold px-2 py-0.5 rounded-full">Cair</span>
+                    <p className="text-[10px] text-slate-400 mt-0.5">{new Date(p.tgl_tarik).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </motion.div>
+      </div>
+
+      {/* Modal Tarik Uang */}
+      <AnimatePresence>
+        {showModal && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+            onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}>
+            <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-primary-600" />
+                  </div>
+                  <div>
+                    <h2 className="font-bold text-slate-900">Tarik Uang</h2>
+                    <p className="text-xs text-slate-400">Saldo: Rp {(allTimeOmzet - totalDitarik).toLocaleString("id-ID")}</p>
+                  </div>
+                </div>
+                <button onClick={() => setShowModal(false)} className="text-slate-400 hover:text-slate-600 transition-colors">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Nominal (Rp)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={allTimeOmzet - totalDitarik}
+                    value={form.jumlah}
+                    onChange={(e) => setForm((f) => ({ ...f, jumlah: e.target.value }))}
+                    placeholder="Contoh: 500000"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Nama Bank</label>
+                  <input
+                    type="text"
+                    value={form.nama_bank}
+                    onChange={(e) => setForm((f) => ({ ...f, nama_bank: e.target.value }))}
+                    placeholder="Contoh: BCA, BRI, Mandiri"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Nomor Rekening</label>
+                  <input
+                    type="text"
+                    value={form.no_rekening}
+                    onChange={(e) => setForm((f) => ({ ...f, no_rekening: e.target.value }))}
+                    placeholder="1234567890"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-semibold text-slate-600 block mb-1">Nama Pemilik Rekening</label>
+                  <input
+                    type="text"
+                    value={form.nama_pemilik}
+                    onChange={(e) => setForm((f) => ({ ...f, nama_pemilik: e.target.value }))}
+                    placeholder="Sesuai nama di rekening"
+                    className="w-full border border-slate-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-300"
+                  />
+                </div>
+                {formError && <p className="text-xs text-red-500 font-medium">{formError}</p>}
+              </div>
+
+              <div className="flex gap-3 mt-5">
+                <button onClick={() => setShowModal(false)}
+                  className="flex-1 border border-slate-200 text-slate-600 hover:bg-slate-50 py-2.5 rounded-xl text-sm font-medium transition-colors">
+                  Batal
+                </button>
+                <button onClick={handleWithdraw} disabled={withdrawLoading}
+                  className="flex-1 bg-primary-600 hover:bg-primary-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-bold transition-colors flex items-center justify-center gap-2">
+                  {withdrawLoading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  Tarik Sekarang
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <div className="grid md:grid-cols-2 gap-6">
         {/* Ringkasan Keuangan */}

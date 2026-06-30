@@ -119,12 +119,40 @@ async function ProductData({ params }: { params: Promise<{ id: string }> }) {
                   Rp {Number(product.harga).toLocaleString("id-ID")}
                 </span>
               </div>
-              <p className="mt-2 mb-2 text-sm text-slate-500">
-                Stok tersisa:{" "}
-                <span className="font-semibold text-slate-700">
-                  {product.stok} item
-                </span>
-              </p>
+              {product.preorder ? (
+                <div className="mt-2 mb-2 space-y-1">
+                  {product.periode_open_start && product.periode_open_end && (
+                    <p className="text-sm text-slate-500">
+                      Periode PO:{" "}
+                      <span className="font-semibold text-slate-700">
+                        {new Date(product.periode_open_start).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                        {" – "}
+                        {new Date(product.periode_open_end).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                      </span>
+                    </p>
+                  )}
+                  {product.estimasi_siap && (
+                    <p className="text-sm text-slate-500">
+                      Estimasi siap:{" "}
+                      <span className="font-semibold text-violet-700">
+                        {new Date(product.estimasi_siap).toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}
+                      </span>
+                    </p>
+                  )}
+                  {product.dp_persen > 0 && (
+                    <p className="text-sm text-orange-600 font-semibold">
+                      DP {product.dp_persen}% sekarang · Sisa bayar pas ambil
+                    </p>
+                  )}
+                </div>
+              ) : (
+                <p className="mt-2 mb-2 text-sm text-slate-500">
+                  Stok tersisa:{" "}
+                  <span className="font-semibold text-slate-700">
+                    {product.stok} item
+                  </span>
+                </p>
+              )}
             </div>
 
             {/* Description */}

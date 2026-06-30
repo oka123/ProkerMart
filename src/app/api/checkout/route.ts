@@ -207,6 +207,12 @@ export async function POST(request: Request) {
 
       const groupOrderKode = `${order_id_base}-${index + 1}`;
 
+      const groupIsPreorder = groupItems.some((item: any) => item.produk?.preorder === true);
+      const groupDpPersen = groupIsPreorder
+        ? Math.max(...groupItems.map((item: any) => item.produk?.dp_persen ?? 0))
+        : 0;
+      const groupDpDibayar = groupDpPersen > 0 ? Math.round(groupTotal * groupDpPersen / 100) : groupTotal;
+
       const { data: insertedOrder, error: dbError } = await supabase
         .from("pesanan")
         .insert({
@@ -221,6 +227,8 @@ export async function POST(request: Request) {
           id_sub_toko: subTokoId,
           id_pengguna: idUserAsli,
           alamat_pengambilan: alamat_pengambilan || null,
+          is_preorder: groupIsPreorder,
+          dp_dibayar: groupDpDibayar,
         })
         .select("id_pesanan")
         .single();
@@ -267,8 +275,10 @@ export async function POST(request: Request) {
         );
       }
 
-      // ─── Atomic stock decrement (race-condition safe via FOR UPDATE lock) ───
+      // ─── Atomic stock decrement (skipped for preorder items) ───
       for (const item of groupItems) {
+        if (item.produk?.preorder === true) continue;
+
         const productId = item.produk?.id_produk ?? item.id_produk;
         const quantity = Number(item.jumlah);
 
@@ -289,17 +299,13 @@ export async function POST(request: Request) {
         }
 
         if (!decremented) {
-          // Stock insufficient (race condition: another buyer grabbed the last stock)
           console.warn(`[Checkout] Stok tidak cukup untuk produk ${productId}`);
-          // Rollback: cancel the orders we already inserted
           await supabase
             .from("pesanan")
             .update({ status_pesanan: "dibatalkan" })
             .in("id_pesanan", insertedOrderIds);
           return NextResponse.json(
-            {
-              error: `Stok produk tidak mencukupi. Silakan perbarui keranjang Anda.`,
-            },
+            { error: `Stok produk tidak mencukupi. Silakan perbarui keranjang Anda.` },
             { status: 400 },
           );
         }

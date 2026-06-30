@@ -30,6 +30,11 @@ export interface Product {
   tgl_dibuat: string;
   metode_jualan: string | null;
   preorder: boolean;
+  periode_open_start: string | null;
+  periode_open_end: string | null;
+  estimasi_siap: string | null;
+  min_order: number;
+  dp_persen: number;
   sub_toko: SubTokoInfo;
 }
 

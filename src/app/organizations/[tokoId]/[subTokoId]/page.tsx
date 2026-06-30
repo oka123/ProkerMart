@@ -11,6 +11,7 @@ import {
   Loader2,
   Calendar,
   MessageSquare,
+  Clock,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import Link from "next/link";
@@ -65,7 +66,10 @@ function SubTokoDetailContent() {
               foto,
               kategori,
               stok,
-              status_aktif
+              status_aktif,
+              preorder,
+              periode_open_end,
+              estimasi_siap
             )
           `,
           )
@@ -272,9 +276,15 @@ function SubTokoDetailContent() {
                             <Package className="w-10 h-10" />
                           </div>
                         )}
-                        <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-slate-700 shadow-sm">
-                          Stok: {product.stok}
-                        </div>
+                        {product.preorder ? (
+                          <div className="absolute top-2 right-2 bg-violet-600/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-white shadow-sm flex items-center gap-1">
+                            <Clock className="w-2.5 h-2.5" /> PO
+                          </div>
+                        ) : (
+                          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-[10px] font-bold text-slate-700 shadow-sm">
+                            Stok: {product.stok}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col flex-1 p-4">
                         <div className="text-[10px] uppercase tracking-wider text-blue-600 font-bold mb-1">

@@ -14,6 +14,11 @@ const PRODUCT_SELECT = `
   tgl_dibuat,
   metode_jualan,
   preorder,
+  periode_open_start,
+  periode_open_end,
+  estimasi_siap,
+  min_order,
+  dp_persen,
   sub_toko (
     id_sub_toko,
     nama_proker,

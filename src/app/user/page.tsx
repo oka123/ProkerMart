@@ -190,6 +190,23 @@ export default function UserDashboardPage() {
         },
       ],
     },
+    {
+      title: "Chat",
+      items: [
+        {
+          name: "Chat Toko",
+          icon: MessageSquare,
+          href: "/user/chat",
+          color: "text-primary-600",
+        },
+        {
+          name: "Bantuan & Chat Admin",
+          icon: MessageSquare,
+          href: "/user/bantuan",
+          color: "text-emerald-500",
+        },
+      ],
+    },
   ];
 
   if (isLoading) {
@@ -249,14 +266,9 @@ export default function UserDashboardPage() {
                     <Link href="/cart" className="relative">
                       <ShoppingBag className="w-6 h-6" />
                     </Link>
-                    <button
-                      onClick={() =>
-                        window.dispatchEvent(new CustomEvent("openProkerChat"))
-                      }
-                      className="relative"
-                    >
+                    <Link href="/user/chat" className="relative">
                       <MessageSquare className="w-6 h-6" />
-                    </button>
+                    </Link>
                   </div>
                 </div>
               </div>

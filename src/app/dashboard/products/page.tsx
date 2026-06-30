@@ -4,12 +4,12 @@ import { useState, useEffect, useMemo, useCallback, type FormEvent } from "react
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Edit2, Trash2, PackageSearch, Tag, Image as ImageIcon,
-  X, Loader2, Lock,
+  X, Loader2, Lock, Clock,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
+import { useDashboard } from "@/lib/context/DashboardContext";
 
 const KATEGORI = ["Makanan", "Barang", "Jasa"];
-
 const CAN_MANAGE = ["BendaharaProker", "KoorPenggalianDana", "WakilKoorPenggalianDana"];
 
 interface Produk {
@@ -20,6 +20,12 @@ interface Produk {
   stok: number;
   kategori: string | null;
   status_aktif: boolean;
+  preorder: boolean;
+  periode_open_start: string | null;
+  periode_open_end: string | null;
+  estimasi_siap: string | null;
+  min_order: number;
+  dp_persen: number;
 }
 
 interface FormState {
@@ -29,6 +35,12 @@ interface FormState {
   stok: string;
   kategori: string;
   status_aktif: boolean;
+  is_preorder: boolean;
+  periode_open_start: string;
+  periode_open_end: string;
+  estimasi_siap: string;
+  min_order: string;
+  dp_persen: string;
 }
 
 const defaultForm: FormState = {
@@ -38,13 +50,20 @@ const defaultForm: FormState = {
   stok: "",
   kategori: "Barang",
   status_aktif: true,
+  is_preorder: false,
+  periode_open_start: "",
+  periode_open_end: "",
+  estimasi_siap: "",
+  min_order: "1",
+  dp_persen: "0",
 };
 
 export default function ProductsPage() {
   const supabase = useMemo(() => createClient(), []);
+  const { active } = useDashboard();
 
-  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
-  const [idSubToko, setIdSubToko] = useState<string | null>(null);
+  const currentUserRole = active?.role ?? null;
+  const idSubToko = active?.id_sub_toko ?? null;
   const [loadingRole, setLoadingRole] = useState(true);
 
   const [products, setProducts] = useState<Produk[]>([]);
@@ -67,7 +86,7 @@ export default function ProductsPage() {
     setLoadingProducts(true);
     const { data } = await supabase
       .from("produk")
-      .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif")
+      .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen")
       .eq("id_sub_toko", subTokoId)
       .order("tgl_dibuat", { ascending: false });
     setProducts(data ?? []);
@@ -75,24 +94,15 @@ export default function ProductsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const user = session?.user;
-      if (!user) { setLoadingRole(false); setLoadingProducts(false); return; }
+    setLoadingRole(false);
+    if (!idSubToko) { setLoadingProducts(false); return; }
+    fetchProducts(idSubToko);
+  }, [idSubToko, fetchProducts]);
 
-      const { data } = await supabase
-        .from("sub_toko_member")
-        .select("role, id_sub_toko")
-        .eq("id_pengguna", user.id)
-        .eq("status", "active")
-        .maybeSingle();
-
-      setLoadingRole(false);
-      if (!data) { setLoadingProducts(false); return; }
-      setCurrentUserRole(data.role);
-      setIdSubToko(data.id_sub_toko);
-      fetchProducts(data.id_sub_toko);
-    });
-  }, [supabase, fetchProducts]);
+  const toDatetimeLocal = (iso: string | null) => {
+    if (!iso) return "";
+    return iso.slice(0, 16);
+  };
 
   const openAdd = () => {
     setEditTarget(null);
@@ -110,6 +120,12 @@ export default function ProductsPage() {
       stok: String(p.stok),
       kategori: p.kategori ?? "Barang",
       status_aktif: p.status_aktif,
+      is_preorder: p.preorder,
+      periode_open_start: toDatetimeLocal(p.periode_open_start),
+      periode_open_end: toDatetimeLocal(p.periode_open_end),
+      estimasi_siap: p.estimasi_siap ?? "",
+      min_order: String(p.min_order ?? 1),
+      dp_persen: String(p.dp_persen ?? 0),
     });
     setSaveError(null);
     setShowModal(true);
@@ -121,7 +137,7 @@ export default function ProductsPage() {
     setIsSaving(true);
     setSaveError(null);
 
-    const payload = {
+    const payload: Record<string, unknown> = {
       nama_produk: form.nama_produk,
       deskripsi: form.deskripsi || null,
       harga: parseFloat(form.harga),
@@ -129,7 +145,22 @@ export default function ProductsPage() {
       kategori: form.kategori,
       status_aktif: form.status_aktif,
       id_sub_toko: idSubToko,
+      preorder: form.is_preorder,
     };
+
+    if (form.is_preorder) {
+      payload.periode_open_start = form.periode_open_start || null;
+      payload.periode_open_end = form.periode_open_end || null;
+      payload.estimasi_siap = form.estimasi_siap || null;
+      payload.min_order = parseInt(form.min_order) || 1;
+      payload.dp_persen = parseInt(form.dp_persen) || 0;
+    } else {
+      payload.periode_open_start = null;
+      payload.periode_open_end = null;
+      payload.estimasi_siap = null;
+      payload.min_order = 1;
+      payload.dp_persen = 0;
+    }
 
     if (editTarget) {
       const { error } = await supabase
@@ -137,15 +168,15 @@ export default function ProductsPage() {
         .update(payload)
         .eq("id_produk", editTarget.id_produk);
       if (error) { setSaveError(error.message); setIsSaving(false); return; }
-      setProducts((prev) => prev.map((p) => p.id_produk === editTarget.id_produk ? { ...p, ...payload } : p));
+      setProducts((prev) => prev.map((p) => p.id_produk === editTarget.id_produk ? { ...p, ...(payload as Partial<Produk>) } : p));
     } else {
       const { data, error } = await supabase
         .from("produk")
         .insert(payload)
-        .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif")
+        .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen")
         .single();
       if (error) { setSaveError(error.message); setIsSaving(false); return; }
-      if (data) setProducts((prev) => [data, ...prev]);
+      if (data) setProducts((prev) => [data as Produk, ...prev]);
     }
 
     setIsSaving(false);
@@ -167,7 +198,6 @@ export default function ProductsPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6">
-      {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Katalog Produk</h1>
@@ -188,7 +218,6 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
         <div className="p-4 border-b border-slate-200 bg-slate-50 flex gap-4">
           <div className="relative flex-1">
@@ -233,19 +262,34 @@ export default function ProductsPage() {
                         <ImageIcon className="w-5 h-5 text-slate-400" />
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900">{product.nama_produk}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="font-bold text-slate-900">{product.nama_produk}</p>
+                          {product.preorder && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-violet-100 text-violet-700">
+                              <Clock className="w-2.5 h-2.5" /> PO
+                            </span>
+                          )}
+                        </div>
                         <p className="text-xs text-slate-500 flex items-center gap-1 mt-1">
                           <Tag className="w-3 h-3" /> {product.kategori ?? "—"}
                         </p>
+                        {product.preorder && product.estimasi_siap && (
+                          <p className="text-xs text-violet-600 mt-0.5">
+                            Estimasi siap: {new Date(product.estimasi_siap).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" })}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 font-semibold text-slate-900">
-                    Rp {Number(product.harga).toLocaleString("id-ID")}
+                  <td className="px-6 py-4">
+                    <p className="font-semibold text-slate-900">Rp {Number(product.harga).toLocaleString("id-ID")}</p>
+                    {product.preorder && product.dp_persen > 0 && (
+                      <p className="text-xs text-violet-600">DP {product.dp_persen}%</p>
+                    )}
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`font-semibold ${product.kategori === "Jasa" ? "text-slate-400 italic" : product.stok > 0 ? "text-slate-700" : "text-red-600"}`}>
-                      {product.kategori === "Jasa" ? "—" : `${product.stok} pcs`}
+                    <span className={`font-semibold ${product.kategori === "Jasa" || product.preorder ? "text-slate-400 italic" : product.stok > 0 ? "text-slate-700" : "text-red-600"}`}>
+                      {product.kategori === "Jasa" ? "—" : product.preorder ? "PO" : `${product.stok} pcs`}
                     </span>
                   </td>
                   <td className="px-6 py-4">
@@ -277,14 +321,13 @@ export default function ProductsPage() {
         )}
       </div>
 
-      {/* Modal Tambah / Edit */}
       <AnimatePresence>
         {showModal && (
           <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 p-4"
             onClick={() => setShowModal(false)}>
             <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-              className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6"
+              className="w-full max-w-lg bg-white rounded-2xl shadow-2xl border border-slate-200 p-6 max-h-[90vh] overflow-y-auto"
               onClick={(e) => e.stopPropagation()}>
               <div className="flex items-center justify-between mb-5">
                 <h2 className="text-lg font-bold text-slate-900">
@@ -325,7 +368,7 @@ export default function ProductsPage() {
                       className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-500"
                       placeholder="15000" />
                   </div>
-                  {form.kategori !== "Jasa" && (
+                  {form.kategori !== "Jasa" && !form.is_preorder && (
                     <div>
                       <label className="block text-xs font-semibold text-slate-500 mb-1.5">Stok</label>
                       <input type="number" required min="0" value={form.stok}
@@ -343,6 +386,65 @@ export default function ProductsPage() {
                     rows={3}
                     className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary-500 resize-none"
                     placeholder="Deskripsi singkat produk..." />
+                </div>
+
+                {/* Pre-Order Toggle */}
+                <div className="border border-slate-200 rounded-xl p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-700">Pre-Order</p>
+                      <p className="text-xs text-slate-500">Pembeli pesan dalam periode tertentu, barang diproduksi setelah PO ditutup</p>
+                    </div>
+                    <button type="button"
+                      onClick={() => setForm({ ...form, is_preorder: !form.is_preorder })}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${form.is_preorder ? "bg-violet-600" : "bg-slate-200"}`}>
+                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${form.is_preorder ? "translate-x-6" : "translate-x-1"}`} />
+                    </button>
+                  </div>
+
+                  {form.is_preorder && (
+                    <div className="space-y-3 pt-1">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1.5">Periode Buka PO</label>
+                          <input type="datetime-local" required value={form.periode_open_start}
+                            onChange={(e) => setForm({ ...form, periode_open_start: e.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1.5">Periode Tutup PO</label>
+                          <input type="datetime-local" required value={form.periode_open_end}
+                            onChange={(e) => setForm({ ...form, periode_open_end: e.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-violet-500" />
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-500 mb-1.5">Estimasi Siap</label>
+                        <input type="date" required value={form.estimasi_siap}
+                          onChange={(e) => setForm({ ...form, estimasi_siap: e.target.value })}
+                          className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500" />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1.5">Min. Order (pcs)</label>
+                          <input type="number" min="1" value={form.min_order}
+                            onChange={(e) => setForm({ ...form, min_order: e.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+                            placeholder="1" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold text-slate-500 mb-1.5">DP (%)</label>
+                          <input type="number" min="0" max="100" value={form.dp_persen}
+                            onChange={(e) => setForm({ ...form, dp_persen: e.target.value })}
+                            className="w-full rounded-xl border border-slate-300 px-4 py-2.5 text-sm outline-none focus:ring-2 focus:ring-violet-500"
+                            placeholder="0 = bayar full" />
+                          <p className="text-xs text-slate-400 mt-1">0 = bayar penuh saat order</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-3">

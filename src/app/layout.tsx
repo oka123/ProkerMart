@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Inter } from "next/font/google";
 import { Suspense } from "react";
 import "./globals.css";
-import { Chat } from "@/components/Chat";
 import { PwaRegister } from "@/components/PwaRegister";
 import { PwaInstallPrompt } from "@/components/PwaInstallPrompt";
 
@@ -43,7 +42,6 @@ export default function RootLayout({
         <Suspense fallback={null}>
           <PwaInstallPrompt />
         </Suspense>
-        <Chat />
       </body>
     </html>
   );

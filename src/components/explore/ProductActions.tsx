@@ -9,6 +9,7 @@ import {
   Loader2,
   AlertCircle,
   MessageSquare,
+  Clock,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { addToCart } from "@/lib/supabase/queries/cart";
@@ -36,14 +37,17 @@ export function ProductActions({
   subTokoId,
 }: ProductActionsProps) {
   const router = useRouter();
-  const [quantity, setQuantity] = useState(1);
+  const isPreorder: boolean = product?.preorder ?? false;
+  const minOrder: number = isPreorder ? (product?.min_order ?? 1) : 1;
+  const dpPersen: number = isPreorder ? (product?.dp_persen ?? 0) : 0;
+
+  const [quantity, setQuantity] = useState(minOrder);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationError, setNotificationError] = useState<string | null>(null);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(true);
 
   useEffect(() => {
-    // Check auth state on mount
     import("@/lib/supabase/client").then(({ createClient }) => {
       createClient()
         .auth.getUser()
@@ -51,7 +55,18 @@ export function ProductActions({
     });
   }, []);
 
+  // PO periode check
+  const now = new Date();
+  const periodeStart = product?.periode_open_start ? new Date(product.periode_open_start) : null;
+  const periodeEnd = product?.periode_open_end ? new Date(product.periode_open_end) : null;
+  const poTutup = isPreorder && periodeEnd && now > periodeEnd;
+  const poBelumBuka = isPreorder && periodeStart && now < periodeStart;
+  const poDisabled = poTutup || poBelumBuka;
+
+  const maxQty = isPreorder ? 999 : stock;
   const totalPrice = price * quantity;
+  const dpAmount = dpPersen > 0 ? Math.round(totalPrice * dpPersen / 100) : totalPrice;
+  const sisaBayar = dpPersen > 0 ? totalPrice - dpAmount : 0;
 
   const handleAddToCart = async () => {
     if (!isLoggedIn) {
@@ -95,35 +110,50 @@ export function ProductActions({
       router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
       return;
     }
-    // 1. Bungkus data produk persis seperti struktur tabel 'keranjang'
     const itemBeliLangsung = [
       {
-        jumlah: quantity,      // Mengambil dari state quantity yang sudah Bli buat
-        produk: product,       // Mengambil dari props product utuh
+        jumlah: quantity,
+        produk: product,
       }
     ];
 
-    // 2. Simpan sementara di memori browser (sessionStorage)
     sessionStorage.setItem("directCheckoutItem", JSON.stringify(itemBeliLangsung));
-
-    // 3. Pindah ke checkout dengan memberikan "Tanda Pengenal" jalur langsung
     router.push("/checkout?jalur=langsung");
   };
+
+  const isOutOfStock = !isPreorder && stock === 0;
 
   return (
     <>
       <div className="flex flex-col gap-6 flex-1">
+        {/* PO Periode Warning */}
+        {isPreorder && poTutup && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-xl text-sm text-red-700">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>Periode pre-order sudah tutup.</span>
+          </div>
+        )}
+        {isPreorder && poBelumBuka && periodeStart && (
+          <div className="flex items-center gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-700">
+            <Clock className="w-4 h-4 shrink-0" />
+            <span>PO dibuka mulai {periodeStart.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}.</span>
+          </div>
+        )}
+
         {/* Quantity Selector */}
         <div className="flex flex-col gap-2">
           <label className="text-sm font-semibold text-slate-700 flex items-center gap-2">
             <Package className="w-4 h-4 text-blue-500" />
             Jumlah Pembelian
+            {isPreorder && minOrder > 1 && (
+              <span className="text-xs text-violet-600 font-normal">min. {minOrder} item</span>
+            )}
           </label>
           <div className="flex items-center gap-3">
             <div className="flex items-center border border-slate-300 rounded-lg overflow-hidden">
               <button
                 type="button"
-                onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                onClick={() => setQuantity(Math.max(minOrder, quantity - 1))}
                 className="w-9 h-9 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition font-bold text-lg"
               >
                 −
@@ -133,13 +163,15 @@ export function ProductActions({
               </span>
               <button
                 type="button"
-                onClick={() => setQuantity(Math.min(stock, quantity + 1))}
+                onClick={() => setQuantity(Math.min(maxQty, quantity + 1))}
                 className="w-9 h-9 flex items-center justify-center text-slate-600 hover:bg-slate-100 transition font-bold text-lg"
               >
                 +
               </button>
             </div>
-            <span className="text-sm text-slate-500">Maks. {stock} item</span>
+            <span className="text-sm text-slate-500">
+              {isPreorder ? "Pre-Order" : `Maks. ${stock} item`}
+            </span>
           </div>
         </div>
 
@@ -154,12 +186,29 @@ export function ProductActions({
             <span>×{quantity}</span>
           </div>
           <hr className="border-blue-200 mb-2" />
-          <div className="flex justify-between items-center font-bold text-slate-900">
-            <span>Total</span>
-            <span className="text-blue-600 text-lg">
-              Rp {totalPrice.toLocaleString("id-ID")}
-            </span>
-          </div>
+          {dpPersen > 0 ? (
+            <>
+              <div className="flex justify-between items-center text-sm text-slate-500 mb-1">
+                <span>Total harga</span>
+                <span>Rp {totalPrice.toLocaleString("id-ID")}</span>
+              </div>
+              <div className="flex justify-between items-center font-bold text-orange-700">
+                <span>DP sekarang ({dpPersen}%)</span>
+                <span className="text-lg">Rp {dpAmount.toLocaleString("id-ID")}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs text-slate-500 mt-1">
+                <span>Sisa bayar saat ambil</span>
+                <span>Rp {sisaBayar.toLocaleString("id-ID")}</span>
+              </div>
+            </>
+          ) : (
+            <div className="flex justify-between items-center font-bold text-slate-900">
+              <span>Total</span>
+              <span className="text-blue-600 text-lg">
+                Rp {totalPrice.toLocaleString("id-ID")}
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}
@@ -175,7 +224,7 @@ export function ProductActions({
           <button
             type="button"
             onClick={handleAddToCart}
-            disabled={stock === 0 || isAddingToCart}
+            disabled={isOutOfStock || isAddingToCart || !!poDisabled}
             className="w-full bg-emerald-600 text-white font-bold py-2.5 px-3 rounded-xl hover:bg-emerald-700 active:scale-95 transition-all flex items-center justify-center gap-2 text-sm shadow-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
             {isAddingToCart ? (
@@ -190,15 +239,15 @@ export function ProductActions({
           <button
             type="button"
             onClick={handleCheckout}
-            disabled={stock === 0}
+            disabled={isOutOfStock || !!poDisabled}
             className="w-full bg-blue-600 text-white font-bold py-2.5 px-3 rounded-xl hover:bg-blue-700 active:scale-95 transition-all shadow-sm text-sm disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer truncate"
           >
-            Checkout
+            {dpPersen > 0 ? `Bayar DP` : "Checkout"}
           </button>
         </div>
       </div>
 
-      {/* Success Toast Notification */}
+      {/* Success Toast */}
       {showNotification && (
         <Link href="/cart">
           <div className="fixed top-16 right-0 lg:right-8 z-50 bg-slate-900 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
@@ -210,7 +259,7 @@ export function ProductActions({
         </Link>
       )}
 
-      {/* Error Toast Notification */}
+      {/* Error Toast */}
       {notificationError && (
         <div className="fixed bottom-8 right-8 z-50 bg-red-600 text-white px-5 py-4 rounded-xl shadow-2xl flex items-center gap-3 animate-in slide-in-from-bottom-4">
           <AlertCircle className="w-5 h-5 text-red-200" />

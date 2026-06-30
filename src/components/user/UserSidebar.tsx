@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Package, Bell, Ticket, PencilLine } from "lucide-react";
+import { User, Package, Bell, Ticket, PencilLine, MessageSquare } from "lucide-react";
 import Image from "next/image";
 import { LogoutButton } from "../logout-button";
 import { SwitchRoleButton } from "../switch-role-button";
@@ -43,6 +43,18 @@ const menuItems = [
     href: "/user/voucher",
     icon: Ticket,
     color: "text-primary-600",
+  },
+  {
+    name: "Chat Toko",
+    href: "/user/chat",
+    icon: MessageSquare,
+    color: "text-primary-500",
+  },
+  {
+    name: "Bantuan & Chat",
+    href: "/user/bantuan",
+    icon: MessageSquare,
+    color: "text-emerald-500",
   },
   // { name: "Koin ProkerMart", href: "/user/coins", icon: Coins, color: "text-yellow-500" },
 ];

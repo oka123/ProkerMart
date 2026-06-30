@@ -15,7 +15,6 @@ const localIPs = getLocalIPs();
 console.log("Local IPs:", localIPs);
 
 const nextConfig: NextConfig = {
-  cacheComponents: true,
   allowedDevOrigins: [
     ...localIPs,
     "localhost",
