@@ -396,15 +396,16 @@ export async function POST(request: Request) {
     let enabled_payments: string[] = [];
     if (metode_pembayaran === "qris") {
       enabled_payments = ["gopay", "shopeepay", "ovo", "other_qris"];
-    } else if (metode_pembayaran === "transfer") {
-      enabled_payments = [
-        "bca_va",
-        "bni_va",
-        "bri_va",
-        "mandiri_va",
-        "permata_va",
-      ];
     }
+    // else if (metode_pembayaran === "transfer") {
+    //   enabled_payments = [
+    //     "bca_va",
+    //     "bni_va",
+    //     "bri_va",
+    //     "mandiri_va",
+    //     "permata_va",
+    //   ];
+    // }
 
     const origin = new URL(request.url).origin;
 

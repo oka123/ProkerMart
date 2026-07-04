@@ -6,7 +6,7 @@ import crypto from "crypto";
 export async function POST(request: Request) {
   const supabase = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SERVICE_SUPABASE!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
   );
   try {
     const notification = await request.json();
