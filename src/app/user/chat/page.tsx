@@ -27,6 +27,7 @@ type PesanToko = {
   isi: string;
   is_from_toko: boolean;
   created_at: string;
+  pengguna?: { nama: string } | null;
 };
 
 type SubTokoOption = {
@@ -128,7 +129,7 @@ function UserChatPage() {
     try {
       const { data, error } = await supabase
         .from("pesan_toko")
-        .select("*")
+        .select("*, pengguna!id_pengirim(nama)")
         .eq("id_chat", chat.id)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -145,10 +146,23 @@ function UserChatPage() {
       .on(
         "postgres_changes",
         { event: "INSERT", schema: "public", table: "pesan_toko", filter: `id_chat=eq.${chat.id}` },
-        (payload) => {
+        async (payload) => {
+          const newMsg = payload.new as any;
+          if (newMsg.is_from_toko) {
+            try {
+              const { data: senderData } = await supabase
+                .from("pengguna")
+                .select("nama")
+                .eq("id_pengguna", newMsg.id_pengirim)
+                .single();
+              newMsg.pengguna = senderData ? { nama: senderData.nama } : null;
+            } catch (err) {
+              console.error("[UserChat - getSenderName] Error:", err);
+            }
+          }
           setPesanList((prev) => {
-            if (prev.find((m) => m.id === payload.new.id)) return prev;
-            return [...prev, payload.new as PesanToko];
+            if (prev.find((m) => m.id === newMsg.id)) return prev;
+            return [...prev, newMsg as PesanToko];
           });
         }
       )
@@ -500,7 +514,9 @@ function ChatView({
             return (
               <div key={m.id} className={`flex flex-col gap-0.5 ${isOwn ? "items-end" : "items-start"}`}>
                 {!isOwn && (
-                  <span className="text-[10px] text-slate-400 font-semibold px-1">Toko</span>
+                  <span className="text-[10px] text-slate-400 font-semibold px-1">
+                    {m.is_from_toko && m.pengguna?.nama ? m.pengguna.nama : "Toko"}
+                  </span>
                 )}
                 <div
                   className={`max-w-[75%] px-3.5 py-2.5 rounded-2xl text-sm leading-relaxed ${

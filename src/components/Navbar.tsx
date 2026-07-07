@@ -185,8 +185,12 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                     )}
                   </Link>
                   <Link
-                    href={userRole === "proker" || userRole === "organisasi" ? "/dashboard/chat" : "/user/chat"}
-                    className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full transition-colors"
+                    href={
+                      userRole === "proker" || userRole === "organisasi"
+                        ? "/dashboard/chat"
+                        : "/user/chat"
+                    }
+                    className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full lg:hidden transition-colors"
                   >
                     <MessageSquare className="w-5 h-5" />
                   </Link>
@@ -272,7 +276,11 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                   </span>
                 </Link>
                 <Link
-                  href={userRole === "proker" || userRole === "organisasi" ? "/dashboard/chat" : "/user/chat"}
+                  href={
+                    userRole === "proker" || userRole === "organisasi"
+                      ? "/dashboard/chat"
+                      : "/user/chat"
+                  }
                   className="p-2 text-slate-500 active:text-primary-600 relative"
                 >
                   <MessageSquare className="w-6 h-6" />
