@@ -20,11 +20,18 @@ import { Logo } from "@/components/Logo";
 import { LogoutButton } from "@/components/logout-button";
 import { SwitchRoleButton } from "@/components/switch-role-button";
 import { createClient } from "@/lib/supabase/client";
-import { DashboardContext, type DashboardSubToko } from "@/lib/context/DashboardContext";
+import {
+  DashboardContext,
+  type DashboardSubToko,
+} from "@/lib/context/DashboardContext";
 
 interface SubTokoOption extends DashboardSubToko {}
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const pathname = usePathname();
   const [options, setOptions] = useState<SubTokoOption[]>([]);
   const [active, setActive] = useState<SubTokoOption | null>(null);
@@ -37,7 +44,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (!session?.user) return;
       const { data } = await supabase
         .from("sub_toko_member")
-        .select("id_member, id_sub_toko, role, sub_toko(nama_proker, toko(organisasi(nama_organisasi)))")
+        .select(
+          "id_member, id_sub_toko, role, sub_toko(nama_proker, toko(organisasi(nama_organisasi)))",
+        )
         .eq("id_pengguna", session.user.id)
         .eq("status", "active");
 
@@ -46,7 +55,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const parsed: SubTokoOption[] = data.map((row: any) => {
         const st = row.sub_toko;
         const toko = Array.isArray(st?.toko) ? st.toko[0] : st?.toko;
-        const org = Array.isArray(toko?.organisasi) ? toko.organisasi[0] : toko?.organisasi;
+        const org = Array.isArray(toko?.organisasi)
+          ? toko.organisasi[0]
+          : toko?.organisasi;
         return {
           id_sub_toko: row.id_sub_toko,
           id_member: row.id_member,
@@ -73,7 +84,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   };
 
   const initials = active?.nama_org
-    ? active.nama_org.split(" ").map((w: string) => w[0]).join("").slice(0, 2).toUpperCase()
+    ? active.nama_org
+        .split(" ")
+        .map((w: string) => w[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase()
     : "??";
 
   const navigation = [
@@ -82,7 +98,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: "Katalog Produk", href: "/dashboard/products", icon: Package },
     { name: "Laporan Penjualan", href: "/dashboard/reports", icon: TrendingUp },
     { name: "Tim Proker", href: "/dashboard/team", icon: Users },
-    { name: "Pengaturan Sub Toko", href: "/dashboard/settings", icon: Settings },
+    {
+      name: "Pengaturan Sub Toko",
+      href: "/dashboard/settings",
+      icon: Settings,
+    },
   ];
 
   return (
@@ -105,8 +125,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 {initials}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-bold text-slate-900 truncate">{active?.nama_org ?? "—"}</p>
-                <p className="text-xs text-slate-500 truncate">{active?.nama_proker ?? "—"}</p>
+                <p className="text-sm font-bold text-slate-900 truncate">
+                  {active?.nama_org ?? "—"}
+                </p>
+                <p className="text-xs text-slate-500 truncate">
+                  {active?.nama_proker ?? "—"}
+                </p>
               </div>
             </div>
 
@@ -117,7 +141,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                   onClick={() => setShowSwitcher((v) => !v)}
                   className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-primary-50 hover:bg-primary-100 text-primary-700 text-xs font-semibold rounded-lg border border-primary-200 transition-colors"
                 >
-                  <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showSwitcher ? "rotate-180" : ""}`} />
+                  <ChevronDown
+                    className={`w-3.5 h-3.5 transition-transform ${showSwitcher ? "rotate-180" : ""}`}
+                  />
                   Ganti Proker
                 </button>
 
@@ -138,10 +164,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     </div>
                     <div className="max-h-52 overflow-y-auto">
                       {options
-                        .filter((o) =>
-                          !searchQuery ||
-                          o.nama_proker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          o.nama_org.toLowerCase().includes(searchQuery.toLowerCase())
+                        .filter(
+                          (o) =>
+                            !searchQuery ||
+                            o.nama_proker
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()) ||
+                            o.nama_org
+                              .toLowerCase()
+                              .includes(searchQuery.toLowerCase()),
                         )
                         .map((opt) => (
                           <button
@@ -150,20 +181,31 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                             className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
                           >
                             <div className="flex-1 min-w-0">
-                              <p className="text-sm font-semibold text-slate-800 truncate">{opt.nama_org}</p>
-                              <p className="text-xs text-slate-500 truncate">{opt.nama_proker}</p>
+                              <p className="text-sm font-semibold text-slate-800 truncate">
+                                {opt.nama_org}
+                              </p>
+                              <p className="text-xs text-slate-500 truncate">
+                                {opt.nama_proker}
+                              </p>
                             </div>
                             {active?.id_sub_toko === opt.id_sub_toko && (
                               <Check className="w-4 h-4 text-primary-600 shrink-0" />
                             )}
                           </button>
                         ))}
-                      {options.filter((o) =>
-                        !searchQuery ||
-                        o.nama_proker.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                        o.nama_org.toLowerCase().includes(searchQuery.toLowerCase())
+                      {options.filter(
+                        (o) =>
+                          !searchQuery ||
+                          o.nama_proker
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()) ||
+                          o.nama_org
+                            .toLowerCase()
+                            .includes(searchQuery.toLowerCase()),
                       ).length === 0 && (
-                        <p className="px-4 py-3 text-xs text-slate-400 text-center">Proker tidak ditemukan</p>
+                        <p className="px-4 py-3 text-xs text-slate-400 text-center">
+                          Proker tidak ditemukan
+                        </p>
                       )}
                     </div>
                   </div>
@@ -186,7 +228,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                       : "text-slate-600 hover:bg-slate-50 hover:text-slate-900"
                   }`}
                 >
-                  <Icon className={`w-5 h-5 ${isActive ? "text-primary-600" : "text-slate-400"}`} />
+                  <Icon
+                    className={`w-5 h-5 ${isActive ? "text-primary-600" : "text-slate-400"}`}
+                  />
                   {item.name}
                 </Link>
               );
@@ -195,7 +239,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
 
         <div className="p-4 border-t border-slate-200 flex flex-col gap-1">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1">Akun</p>
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider px-3 mb-1">
+            Akun
+          </p>
           <Link
             href="/user/account/profile"
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${

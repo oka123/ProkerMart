@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useDashboard } from "@/lib/context/DashboardContext";
+import Image from "next/image";
 
 const KATEGORI = ["Makanan", "Barang", "Jasa"];
 const CAN_MANAGE = ["BendaharaProker", "KoorPenggalianDana", "WakilKoorPenggalianDana"];
@@ -26,6 +27,8 @@ interface Produk {
   estimasi_siap: string | null;
   min_order: number;
   dp_persen: number;
+  foto: string | null;
+  metode_jualan: string | null;
 }
 
 interface FormState {
@@ -41,6 +44,9 @@ interface FormState {
   estimasi_siap: string;
   min_order: string;
   dp_persen: string;
+  foto: string;
+  metode_pickup: boolean;
+  metode_delivery: boolean;
 }
 
 const defaultForm: FormState = {
@@ -56,6 +62,9 @@ const defaultForm: FormState = {
   estimasi_siap: "",
   min_order: "1",
   dp_persen: "0",
+  foto: "",
+  metode_pickup: true,
+  metode_delivery: true,
 };
 
 export default function ProductsPage() {
@@ -86,7 +95,7 @@ export default function ProductsPage() {
     setLoadingProducts(true);
     const { data } = await supabase
       .from("produk")
-      .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen")
+      .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen, foto, metode_jualan")
       .eq("id_sub_toko", subTokoId)
       .order("tgl_dibuat", { ascending: false });
     setProducts(data ?? []);
@@ -94,9 +103,15 @@ export default function ProductsPage() {
   }, [supabase]);
 
   useEffect(() => {
-    setLoadingRole(false);
-    if (!idSubToko) { setLoadingProducts(false); return; }
-    fetchProducts(idSubToko);
+    async function init() {
+      setLoadingRole(false);
+      if (!idSubToko) {
+        setLoadingProducts(false);
+        return;
+      }
+      await fetchProducts(idSubToko);
+    }
+    init();
   }, [idSubToko, fetchProducts]);
 
   const toDatetimeLocal = (iso: string | null) => {
@@ -126,6 +141,9 @@ export default function ProductsPage() {
       estimasi_siap: p.estimasi_siap ?? "",
       min_order: String(p.min_order ?? 1),
       dp_persen: String(p.dp_persen ?? 0),
+      foto: p.foto ?? "",
+      metode_pickup: p.metode_jualan ? p.metode_jualan.includes("pickup") : true,
+      metode_delivery: p.metode_jualan ? p.metode_jualan.includes("delivery") : true,
     });
     setSaveError(null);
     setShowModal(true);
@@ -134,8 +152,18 @@ export default function ProductsPage() {
   const handleSave = async (e: FormEvent) => {
     e.preventDefault();
     if (!idSubToko) return;
+
+    if (!form.metode_pickup && !form.metode_delivery) {
+      setSaveError("Pilih minimal satu metode penjualan (Pickup atau Delivery).");
+      return;
+    }
+
     setIsSaving(true);
     setSaveError(null);
+
+    const methods: string[] = [];
+    if (form.metode_pickup) methods.push("pickup");
+    if (form.metode_delivery) methods.push("delivery");
 
     const payload: Record<string, unknown> = {
       nama_produk: form.nama_produk,
@@ -146,6 +174,8 @@ export default function ProductsPage() {
       status_aktif: form.status_aktif,
       id_sub_toko: idSubToko,
       preorder: form.is_preorder,
+      foto: form.foto || null,
+      metode_jualan: methods.join(","),
     };
 
     if (form.is_preorder) {
@@ -173,7 +203,7 @@ export default function ProductsPage() {
       const { data, error } = await supabase
         .from("produk")
         .insert(payload)
-        .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen")
+        .select("id_produk, nama_produk, deskripsi, harga, stok, kategori, status_aktif, preorder, periode_open_start, periode_open_end, estimasi_siap, min_order, dp_persen, foto, metode_jualan")
         .single();
       if (error) { setSaveError(error.message); setIsSaving(false); return; }
       if (data) setProducts((prev) => [data as Produk, ...prev]);
@@ -258,8 +288,12 @@ export default function ProductsPage() {
                   className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center shrink-0">
-                        <ImageIcon className="w-5 h-5 text-slate-400" />
+                      <div className="w-12 h-12 bg-slate-100 rounded-lg overflow-hidden flex items-center justify-center shrink-0 border border-slate-200">
+                        {product.foto ? (
+                          <Image src={product.foto} alt={product.nama_produk} width={48} height={48} className="w-full h-full object-cover" unoptimized />
+                        ) : (
+                          <ImageIcon className="w-5 h-5 text-slate-400" />
+                        )}
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -347,6 +381,63 @@ export default function ProductsPage() {
                     placeholder="Contoh: Kaos Panitia Dies Natalis" />
                 </div>
 
+                {/* Foto Produk */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Foto Produk (opsional)</label>
+                  <div className="space-y-3">
+                    {form.foto ? (
+                      <div className="relative w-32 h-32 rounded-xl overflow-hidden border border-slate-200 group bg-slate-50 flex items-center justify-center">
+                        <Image src={form.foto} alt="Preview" width={128} height={128} className="w-full h-full object-cover" unoptimized />
+                        <button
+                          type="button"
+                          onClick={() => setForm({ ...form, foto: "" })}
+                          className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-white text-xs font-semibold"
+                        >
+                          Hapus Foto
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center w-full">
+                        <label className="flex flex-col items-center justify-center w-full h-32 border-2 border-slate-300 border-dashed rounded-xl cursor-pointer hover:bg-slate-50 transition-colors">
+                          <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                            <ImageIcon className="w-8 h-8 text-slate-400 mb-2" />
+                            <p className="text-xs text-slate-500">Klik untuk unggah gambar (Max. 1MB)</p>
+                          </div>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              if (file.size > 1024 * 1024) {
+                                alert("Ukuran gambar maksimal 1 MB");
+                                return;
+                              }
+                              setIsSaving(true);
+                              const fileExt = file.name.split(".").pop();
+                              const fileName = `product_${idSubToko}_${Date.now()}.${fileExt}`;
+                              try {
+                                const { error: uploadError } = await supabase.storage
+                                  .from("foto_produk")
+                                  .upload(fileName, file, { upsert: true });
+                                if (uploadError) throw uploadError;
+                                const { data } = supabase.storage.from("foto_produk").getPublicUrl(fileName);
+                                setForm((f) => ({ ...f, foto: data.publicUrl }));
+                              } catch (err) {
+                                console.error("[ProductsPage - upload] Error:", err);
+                                alert("Gagal mengunggah foto.");
+                              } finally {
+                                setIsSaving(false);
+                              }
+                            }}
+                          />
+                        </label>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-semibold text-slate-500 mb-1.5">Kategori</label>
                   <div className="flex gap-2">
@@ -357,6 +448,31 @@ export default function ProductsPage() {
                         {k}
                       </button>
                     ))}
+                  </div>
+                </div>
+
+                {/* Metode Penjualan */}
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1.5">Metode Penjualan</label>
+                  <div className="flex gap-6 border border-slate-200 rounded-xl p-3.5 bg-slate-50/50">
+                    <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={form.metode_pickup}
+                        onChange={(e) => setForm({ ...form, metode_pickup: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                      />
+                      Ambil Sendiri (Pickup)
+                    </label>
+                    <label className="flex items-center gap-2.5 text-sm text-slate-700 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={form.metode_delivery}
+                        onChange={(e) => setForm({ ...form, metode_delivery: e.target.checked })}
+                        className="w-4 h-4 rounded border-slate-300 text-primary-600 focus:ring-primary-500 cursor-pointer"
+                      />
+                      Kirim (Delivery)
+                    </label>
                   </div>
                 </div>
 

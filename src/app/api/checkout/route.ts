@@ -207,11 +207,18 @@ export async function POST(request: Request) {
 
       const groupOrderKode = `${order_id_base}-${index + 1}`;
 
-      const groupIsPreorder = groupItems.some((item: any) => item.produk?.preorder === true);
+      const groupIsPreorder = groupItems.some(
+        (item: any) => item.produk?.preorder === true,
+      );
       const groupDpPersen = groupIsPreorder
-        ? Math.max(...groupItems.map((item: any) => item.produk?.dp_persen ?? 0))
+        ? Math.max(
+            ...groupItems.map((item: any) => item.produk?.dp_persen ?? 0),
+          )
         : 0;
-      const groupDpDibayar = groupDpPersen > 0 ? Math.round(groupTotal * groupDpPersen / 100) : groupTotal;
+      const groupDpDibayar =
+        groupDpPersen > 0
+          ? Math.round((groupTotal * groupDpPersen) / 100)
+          : groupTotal;
 
       const { data: insertedOrder, error: dbError } = await supabase
         .from("pesanan")
@@ -229,6 +236,9 @@ export async function POST(request: Request) {
           alamat_pengambilan: alamat_pengambilan || null,
           is_preorder: groupIsPreorder,
           dp_dibayar: groupDpDibayar,
+          // Voucher — only applied to the first order group
+          id_voucher: index === 0 && id_voucher ? id_voucher : null,
+          diskon_voucher: index === 0 ? Math.round(currentDiscountAmount) : 0,
         })
         .select("id_pesanan")
         .single();
@@ -305,7 +315,9 @@ export async function POST(request: Request) {
             .update({ status_pesanan: "dibatalkan" })
             .in("id_pesanan", insertedOrderIds);
           return NextResponse.json(
-            { error: `Stok produk tidak mencukupi. Silakan perbarui keranjang Anda.` },
+            {
+              error: `Stok produk tidak mencukupi. Silakan perbarui keranjang Anda.`,
+            },
             { status: 400 },
           );
         }
