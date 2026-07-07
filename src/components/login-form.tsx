@@ -34,10 +34,12 @@ function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
       });
       if (error) throw error;
 
-      const { data: userData, error: userError } = await supabase.auth.getUser();
+      const { data: userData, error: userError } =
+        await supabase.auth.getUser();
       if (userError) throw userError;
 
-      const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+      const { data: sessionData, error: sessionError } =
+        await supabase.auth.getSession();
       if (sessionError) throw sessionError;
 
       const user =
@@ -61,10 +63,12 @@ function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
         console.debug("[Login] access:", access);
       }
 
-      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/explore";
+      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
       router.push(targetRoute);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Email atau password salah.");
+      setError(
+        err instanceof Error ? err.message : "Email atau password salah.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -166,14 +170,14 @@ function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
             Daftar sekarang
           </Link>
         </p>
-        <p className="text-center text-sm text-slate-500">
+        {/* <p className="text-center text-sm text-slate-500">
           <Link
             href="/login-bypass"
             className="text-transparent font-semibold "
           >
             Login Bypass
           </Link>
-        </p>
+        </p> */}
       </form>
     </div>
   );

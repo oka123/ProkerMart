@@ -61,28 +61,39 @@ export function SwitchRoleButton({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const CACHE_KEY = "switch_role_access";
-    const cached = sessionStorage.getItem(CACHE_KEY);
-    if (cached) {
-      try {
-        const { hasOrganisasi, hasProker } = JSON.parse(cached);
-        setOptions(buildOptions(hasOrganisasi, hasProker, currentRoute));
-        setLoading(false);
-        return;
-      } catch {}
-    }
+    if (!currentRoute) return;
 
     const supabase = createClient();
-    supabase.auth.getUser().then(async ({ data: { user } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      const user = session?.user;
       if (!user) return;
-      const access = await fetchUserAccess(supabase, user.email!);
-      if (!access) return;
-      sessionStorage.setItem(CACHE_KEY, JSON.stringify({
-        hasOrganisasi: access.hasOrganisasi,
-        hasProker: access.hasProker,
-      }));
-      setOptions(buildOptions(access.hasOrganisasi, access.hasProker, currentRoute));
-      setLoading(false);
+
+      const cacheKey = `switch_role_access_${user.id}`;
+      const cached = sessionStorage.getItem(cacheKey);
+      if (cached) {
+        try {
+          const { hasOrganisasi, hasProker } = JSON.parse(cached);
+          setOptions(buildOptions(hasOrganisasi, hasProker, currentRoute));
+          setLoading(false);
+        } catch {}
+      }
+
+      // Revalidate access in the background to ensure fresh data
+      try {
+        const access = await fetchUserAccess(supabase, user.email!);
+        if (access) {
+          const freshAccess = {
+            hasOrganisasi: access.hasOrganisasi,
+            hasProker: access.hasProker,
+          };
+          sessionStorage.setItem(cacheKey, JSON.stringify(freshAccess));
+          setOptions(buildOptions(access.hasOrganisasi, access.hasProker, currentRoute));
+        }
+      } catch (err) {
+        console.error("[SwitchRoleButton - Revalidate] Error:", err);
+      } finally {
+        setLoading(false);
+      }
     });
   }, [currentRoute]);
 
@@ -104,7 +115,7 @@ export function SwitchRoleButton({
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[200] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
+              className="fixed inset-0 z-200 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4"
               onClick={(e) => { e.stopPropagation(); setOpen(false); }}
             >
               <motion.div
@@ -138,7 +149,7 @@ export function SwitchRoleButton({
                       }}
                       className="flex items-center gap-4 p-3.5 text-left rounded-xl border border-slate-100 hover:border-primary-200 hover:bg-primary-50 transition-all group w-full"
                     >
-                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-500 group-hover:bg-primary-100 group-hover:text-primary-600 transition-colors flex-shrink-0">
+                      <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-slate-100 text-slate-500 group-hover:bg-primary-100 group-hover:text-primary-600 transition-colors shrink-0">
                         {option.icon}
                       </div>
                       <div>

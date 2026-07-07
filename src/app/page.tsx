@@ -22,7 +22,7 @@ export default function Home() {
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
       const access = await fetchUserAccess(supabase, user.email!);
-      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/explore";
+      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
       router.push(targetRoute);
     });
   }, [router]);
