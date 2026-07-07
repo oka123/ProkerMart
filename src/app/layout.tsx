@@ -30,6 +30,8 @@ export const viewport: Viewport = {
   maximumScale: 1,
 };
 
+import { PushNotificationManager } from "@/components/PushNotificationManager";
+
 export default function RootLayout({
   children,
 }: {
@@ -39,6 +41,7 @@ export default function RootLayout({
     <html lang="id" className={`${inter.variable} antialiased`}>
       <body className="flex flex-col min-h-screen bg-slate-50 text-slate-900">
         <PwaRegister />
+        <PushNotificationManager />
         {children}
         <Suspense fallback={null}>
           <PwaInstallPrompt />
