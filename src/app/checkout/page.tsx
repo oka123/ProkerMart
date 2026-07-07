@@ -263,7 +263,7 @@ function CheckoutContent() {
       if (savedVoucher) {
         try {
           setAppliedVoucher(JSON.parse(savedVoucher));
-        } catch {}
+        } catch { }
       }
     };
 
@@ -438,7 +438,7 @@ function CheckoutContent() {
       console.error("Terjadi kesalahan saat memanggil API Midtrans:", error);
       alert(
         error.message ||
-          "Terjadi kesalahan sistem. Pastikan server API berjalan.",
+        "Terjadi kesalahan sistem. Pastikan server API berjalan.",
       );
     } finally {
       setIsSavingAddress(false);
@@ -483,8 +483,8 @@ function CheckoutContent() {
                       <button
                         className="flex items-center gap-1 text-xs font-semibold text-blue-600 hover:underline"
                         onClick={() =>
-                          (window.location.href =
-                            "/user/account/address?action=add&return_url=/checkout")
+                        (window.location.href =
+                          "/user/account/address?action=add&return_url=/checkout")
                         }
                       >
                         Tambah Alamat Baru
@@ -496,11 +496,10 @@ function CheckoutContent() {
                         {addresses.map((addr) => (
                           <div
                             key={addr.id_alamat}
-                            className={`bg-white border rounded-lg p-3 text-left transition-all relative ${
-                              selectedAddressId === addr.id_alamat
-                                ? "border-blue-600 ring-2 ring-blue-100"
-                                : "border-slate-200 hover:border-blue-300"
-                            }`}
+                            className={`bg-white border rounded-lg p-3 text-left transition-all relative ${selectedAddressId === addr.id_alamat
+                              ? "border-blue-600 ring-2 ring-blue-100"
+                              : "border-slate-200 hover:border-blue-300"
+                              }`}
                           >
                             <div
                               className="cursor-pointer"
@@ -556,8 +555,8 @@ function CheckoutContent() {
                         </p>
                         <button
                           onClick={() =>
-                            (window.location.href =
-                              "/user/account/address?action=add&return_url=/checkout")
+                          (window.location.href =
+                            "/user/account/address?action=add&return_url=/checkout")
                           }
                           className="inline-block px-4 py-2 text-sm font-semibold text-blue-600 transition-colors rounded-lg bg-blue-50 hover:bg-blue-100"
                         >
@@ -640,11 +639,10 @@ function CheckoutContent() {
                                         [product.id_produk]: "pickup",
                                       }))
                                     }
-                                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
-                                      current === "pickup"
-                                        ? "bg-blue-600 text-white shadow-sm"
-                                        : "text-slate-500 hover:text-slate-800"
-                                    }`}
+                                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${current === "pickup"
+                                      ? "bg-blue-600 text-white shadow-sm"
+                                      : "text-slate-500 hover:text-slate-800"
+                                      }`}
                                   >
                                     Pick Up
                                   </button>
@@ -655,11 +653,10 @@ function CheckoutContent() {
                                         [product.id_produk]: "delivery",
                                       }))
                                     }
-                                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${
-                                      current === "delivery"
-                                        ? "bg-blue-600 text-white shadow-sm"
-                                        : "text-slate-500 hover:text-slate-800"
-                                    }`}
+                                    className={`px-2 py-1 text-xs font-semibold rounded-md transition-colors ${current === "delivery"
+                                      ? "bg-blue-600 text-white shadow-sm"
+                                      : "text-slate-500 hover:text-slate-800"
+                                      }`}
                                   >
                                     Delivery
                                   </button>
@@ -767,13 +764,12 @@ function CheckoutContent() {
             </h2>
             <div
               onClick={() => setIsVoucherModalOpen(true)}
-              className={`flex items-center justify-between p-3.5 transition border rounded-xl hover:bg-blue-50 cursor-pointer ${
-                appliedVoucher
-                  ? voucherError
-                    ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
-                    : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
-                  : "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100"
-              }`}
+              className={`flex items-center justify-between p-3.5 transition border rounded-xl hover:bg-blue-50 cursor-pointer ${appliedVoucher
+                ? voucherError
+                  ? "border-red-200 bg-red-50 text-red-700 hover:bg-red-100"
+                  : "border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100"
+                : "border-blue-100 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                }`}
             >
               <div className="flex items-center gap-2.5 text-sm font-semibold min-w-0 flex-1 mr-2">
                 <Ticket className="w-4.5 h-4.5 shrink-0" />
@@ -810,14 +806,13 @@ function CheckoutContent() {
               Metode Pembayaran
             </h2>
 
-            <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
               <div
                 onClick={() => handlePaymentSelect("qris")}
-                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
-                  paymentMethod === "qris"
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${paymentMethod === "qris"
+                  ? "border-blue-600 bg-blue-50"
+                  : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <QrCode
                   className={`w-6 h-6 ${paymentMethod === "qris" ? "text-blue-600" : "text-slate-400"}`}
@@ -829,7 +824,7 @@ function CheckoutContent() {
                 </span>
               </div>
 
-              <div
+              {/* <div
                 onClick={() => handlePaymentSelect("transfer")}
                 className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
                   paymentMethod === "transfer"
@@ -845,15 +840,14 @@ function CheckoutContent() {
                 >
                   Transfer Bank
                 </span>
-              </div>
+              </div> */}
 
               <div
                 onClick={() => handlePaymentSelect("cod")}
-                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${
-                  paymentMethod === "cod"
-                    ? "border-blue-600 bg-blue-50"
-                    : "border-slate-200 hover:border-blue-300"
-                }`}
+                className={`cursor-pointer rounded-xl border p-3 flex flex-col items-center justify-center gap-2 transition-all text-center ${paymentMethod === "cod"
+                  ? "border-blue-600 bg-blue-50"
+                  : "border-slate-200 hover:border-blue-300"
+                  }`}
               >
                 <Wallet
                   className={`w-6 h-6 ${paymentMethod === "cod" ? "text-blue-600" : "text-slate-400"}`}
@@ -892,13 +886,12 @@ function CheckoutContent() {
               !paymentMethod ||
               isSavingAddress
             }
-            className={`px-8 py-3 rounded-xl font-bold text-white transition-all shadow-sm ${
-              Object.keys(itemMethods).length === 0 ||
+            className={`px-8 py-3 rounded-xl font-bold text-white transition-all shadow-sm ${Object.keys(itemMethods).length === 0 ||
               !paymentMethod ||
               isSavingAddress
-                ? "bg-slate-300 cursor-not-allowed"
-                : "bg-emerald-600 hover:bg-emerald-700 active:scale-95 hover:shadow-md"
-            }`}
+              ? "bg-slate-300 cursor-not-allowed"
+              : "bg-emerald-600 hover:bg-emerald-700 active:scale-95 hover:shadow-md"
+              }`}
           >
             {isSavingAddress ? (
               <span className="flex items-center gap-2">
@@ -995,11 +988,10 @@ function CheckoutContent() {
                   return (
                     <div
                       key={v.id_voucher}
-                      className={`p-4 border rounded-xl flex flex-col justify-between gap-3 transition text-left ${
-                        appliedVoucher?.id_voucher === v.id_voucher
-                          ? "border-blue-500 bg-blue-50/50"
-                          : "border-slate-200 hover:border-blue-300"
-                      } ${!isValid ? "opacity-60 bg-slate-50" : ""}`}
+                      className={`p-4 border rounded-xl flex flex-col justify-between gap-3 transition text-left ${appliedVoucher?.id_voucher === v.id_voucher
+                        ? "border-blue-500 bg-blue-50/50"
+                        : "border-slate-200 hover:border-blue-300"
+                        } ${!isValid ? "opacity-60 bg-slate-50" : ""}`}
                     >
                       <div className="flex justify-between items-start">
                         <div>
@@ -1062,11 +1054,10 @@ function CheckoutContent() {
                               }
                             }}
                             disabled={!isValid}
-                            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${
-                              isValid
-                                ? "bg-blue-600 text-white hover:bg-blue-700"
-                                : "bg-slate-200 text-slate-400 cursor-not-allowed"
-                            }`}
+                            className={`px-3 py-1 rounded-lg text-xs font-bold transition ${isValid
+                              ? "bg-blue-600 text-white hover:bg-blue-700"
+                              : "bg-slate-200 text-slate-400 cursor-not-allowed"
+                              }`}
                           >
                             {!isMinBelanjaMet
                               ? "Min. Belanja"

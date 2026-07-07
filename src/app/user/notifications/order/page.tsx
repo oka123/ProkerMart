@@ -16,6 +16,7 @@ interface Notification {
   konten: string;
   tgl_kirim: string;
   status_dibaca: boolean;
+  link_terkait?: string | null;
 }
 
 export default function OrderNotificationsPage() {
@@ -150,9 +151,14 @@ export default function OrderNotificationsPage() {
                   notifications.map((notif) => (
                     <div
                       key={notif.id_notifikasi}
-                      onClick={() =>
-                        !notif.status_dibaca && markAsRead(notif.id_notifikasi)
-                      }
+                      onClick={() => {
+                        if (!notif.status_dibaca) {
+                          markAsRead(notif.id_notifikasi);
+                        }
+                        if (notif.link_terkait) {
+                          router.push(notif.link_terkait);
+                        }
+                      }}
                       className={`flex flex-col lg:flex-row gap-4 p-4 lg:p-6 transition-colors hover:bg-slate-50/50 cursor-pointer ${!notif.status_dibaca ? "bg-orange-50/30" : "bg-white"}`}
                     >
                       <div className="flex items-center justify-center w-12 h-12 overflow-hidden border rounded-lg lg:w-16 lg:h-16 bg-slate-100 shrink-0 border-slate-100">

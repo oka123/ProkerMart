@@ -1,4 +1,5 @@
 "use client";
+import { RekomendasiSection } from "@/components/explore/RekomendasiSection";
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
@@ -226,11 +227,10 @@ export function ExploreClient() {
             {/* Filter Button */}
             <button
               onClick={() => setIsFilterOpen(true)}
-              className={`relative flex items-center justify-center px-4 rounded-xl border-2 transition-all ${
-                activeFilterCount > 0
-                  ? "border-primary-500 bg-primary-50 text-primary-600"
-                  : "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
-              }`}
+              className={`relative flex items-center justify-center px-4 rounded-xl border-2 transition-all ${activeFilterCount > 0
+                ? "border-primary-500 bg-primary-50 text-primary-600"
+                : "border-slate-200 bg-slate-100 text-slate-600 hover:bg-slate-200"
+                }`}
             >
               <SlidersHorizontal className="w-5 h-5" />
               {activeFilterCount > 0 && (
@@ -258,11 +258,10 @@ export function ExploreClient() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  className={`flex items-center px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                    activeCategory === cat
-                      ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
-                      : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                  }`}
+                  className={`flex items-center px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${activeCategory === cat
+                    ? "bg-primary-600 text-white shadow-md shadow-primary-600/20"
+                    : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
                 >
                   {cat}
                 </button>
@@ -272,6 +271,7 @@ export function ExploreClient() {
         </div>
       </div>
 
+      <RekomendasiSection />
       {/* Product Grid */}
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full">
         {/* Header: title + sort */}
@@ -311,11 +311,10 @@ export function ExploreClient() {
                       setActiveSort(opt.value);
                       setIsSortOpen(false);
                     }}
-                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${
-                      activeSort === opt.value
-                        ? "text-primary-600 font-semibold bg-primary-50"
-                        : "text-slate-700 hover:bg-slate-50"
-                    }`}
+                    className={`w-full text-left px-4 py-2.5 text-sm transition-colors ${activeSort === opt.value
+                      ? "text-primary-600 font-semibold bg-primary-50"
+                      : "text-slate-700 hover:bg-slate-50"
+                      }`}
                   >
                     {opt.label}
                   </button>
