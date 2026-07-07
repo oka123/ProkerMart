@@ -11,6 +11,8 @@ import {
   FileText,
   Users,
   Loader2,
+  Menu,
+  X,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { LogoutButton } from "@/components/logout-button";
@@ -30,6 +32,11 @@ export default function OrgDashboardLayout({
   const router = useRouter();
   const [org, setOrg] = useState<OrgDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -222,13 +229,101 @@ export default function OrgDashboardLayout({
         </div>
       </div>
 
+      {/* Mobile Sidebar/Drawer */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 z-50 md:hidden flex">
+          {/* Backdrop */}
+          <div
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="fixed inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity"
+          />
+
+          {/* Drawer Content */}
+          <div className="relative flex flex-col w-full max-w-xs bg-slate-900 text-slate-300 h-full shadow-2xl transition-transform animate-slide-in">
+            <div className="h-16 flex items-center justify-between px-6 border-b border-slate-800 bg-slate-950 shrink-0">
+              <Logo />
+              <button
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="p-2 text-slate-400 hover:text-white focus:outline-none"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto py-6 px-4">
+              <div className="mb-8 px-2">
+                <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">
+                  Panel Organisasi
+                </p>
+                <div className="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
+                  <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-white truncate">
+                      {org?.nama_organisasi ?? "—"}
+                    </p>
+                    <p
+                      className={`text-xs ${verificationColor} flex items-center gap-1`}
+                    >
+                      <span
+                        className={`w-2 h-2 rounded-full ${verificationDotColor}`}
+                      ></span>{" "}
+                      {verificationLabel}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <nav className="space-y-1">
+                {navigation.map((item) => {
+                  const isActive = pathname === item.href;
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.href}
+                      className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
+                          ? "bg-primary-600 text-white"
+                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                        }`}
+                    >
+                      <Icon
+                        className={`w-5 h-5 ${isActive ? "text-white" : "text-slate-400"}`}
+                      />
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
+            </div>
+
+            <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-col gap-2 shrink-0">
+              <SwitchRoleButton
+                currentRoute="/org-dashboard"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors w-full"
+              />
+              <LogoutButton className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors w-full" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top navbar for mobile */}
-        <header className="bg-slate-900 border-b border-slate-800 h-16 flex items-center px-4 shrink-0 md:hidden">
-          <span className="font-bold text-xl text-white">
-            {org?.nama_organisasi ?? "Panel Organisasi"}
-          </span>
+        <header className="bg-slate-900 border-b border-slate-800 h-16 flex items-center justify-between px-4 shrink-0 md:hidden">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="p-2 -ml-2 text-slate-400 hover:text-white focus:outline-none"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+            <span className="font-bold text-xl text-white">
+              {org?.nama_organisasi ?? "Panel Organisasi"}
+            </span>
+          </div>
         </header>
 
         {/* Main scrollable content */}
