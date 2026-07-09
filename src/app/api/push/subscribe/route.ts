@@ -5,8 +5,8 @@ export async function POST(req: Request) {
   try {
     const { subscription, userId } = await req.json();
 
-    if (!subscription || !subscription.endpoint || !userId) {
-      return NextResponse.json({ error: "Invalid subscription data or missing user ID" }, { status: 400 });
+    if (!subscription || !subscription.endpoint) {
+      return NextResponse.json({ error: "Invalid subscription data or missing endpoint" }, { status: 400 });
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
@@ -15,7 +15,7 @@ export async function POST(req: Request) {
 
     const { error } = await supabase.from("push_subscriptions").upsert(
       {
-        id_pengguna: userId,
+        id_pengguna: userId || null,
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
@@ -25,7 +25,7 @@ export async function POST(req: Request) {
 
     if (error) {
       console.error("[Push Subscribe API] DB Error:", error);
-      return NextResponse.json({ error: "Database error" }, { status: 500 });
+      return NextResponse.json({ error: "Database error", details: error }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

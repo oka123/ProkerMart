@@ -16,6 +16,9 @@ export const metadata: Metadata = {
   description:
     "Marketplace terpadu yang menyatukan seluruh aktivitas komersial organisasi kampus dalam satu ekosistem digital.",
   manifest: "/site.webmanifest",
+  icons: {
+    apple: "/apple-touch-icon.png",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",

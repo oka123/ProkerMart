@@ -5,16 +5,30 @@ import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Share2, Plus, Smartphone } from "lucide-react";
+import { createClient } from "@/lib/supabase/client";
+
+// Catch the event as early as possible before React hydration
+let globalDeferredPrompt: any = null;
+
+if (typeof window !== "undefined") {
+  window.addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    globalDeferredPrompt = e;
+    window.dispatchEvent(new Event("pwa-prompt-ready"));
+  });
+}
 
 // For Framer Motion, since we're rendering client-side
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
+  const [isAppleDevice, setIsAppleDevice] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
   const pathname = usePathname();
 
-  const cooldown = 1 * 24 * 60 * 60 * 1000; // 1 day
+  // const cooldown = 1 * 24 * 60 * 60 * 1000; // 1 day
+  const cooldown = 0;
 
   // Check cooldown on route/pathname change
   useEffect(() => {
@@ -40,71 +54,80 @@ export function PwaInstallPrompt() {
     const isInstalled = checkStandalone();
     if (isInstalled) return;
 
-    // Detect iOS devices
-    const detectIOS = () => {
+    // Detect Apple devices (iOS Safari and macOS Safari)
+    const detectApple = () => {
       const userAgent = window.navigator.userAgent.toLowerCase();
-      const isApple = /iphone|ipad|ipod/.test(userAgent);
-      // Ensure we exclude macOS / Chrome on iOS if they support standard installs
-      setIsIOS(isApple);
-      return isApple;
+      const iOS = /iphone|ipad|ipod/.test(userAgent);
+      const macSafari = /macintosh/.test(userAgent) && /safari/.test(userAgent) && !/chrome/.test(userAgent);
+      
+      setIsIOS(iOS);
+      setIsAppleDevice(iOS || macSafari);
+      
+      return iOS || macSafari;
     };
 
-    const iosDevice = detectIOS();
+    const appleDevice = detectApple();
 
     // Check dismissal cooldown
-    const dismissedTime = localStorage.getItem("pwa-prompt-dismissed");
-    const now = Date.now();
-
-    if (dismissedTime && now - parseInt(dismissedTime, 10) < cooldown) {
-      return;
-    }
-
-    // Event listener for Android/Desktop install prompt
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-
-      // Double check cooldown before showing
+    const checkCooldown = () => {
       const latestDismissedTime = localStorage.getItem("pwa-prompt-dismissed");
       const currentNow = Date.now();
-      if (
+      return (
         latestDismissedTime &&
         currentNow - parseInt(latestDismissedTime, 10) < cooldown
-      ) {
-        return;
-      }
-
-      setDeferredPrompt(e);
-      setShowPrompt(true);
+      );
     };
 
-    window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+    if (checkCooldown()) return;
 
-    // For iOS Safari, show the prompt manually after a small delay since there's no install event
-    if (iosDevice) {
-      const timer = setTimeout(() => {
-        // Double check cooldown before showing
-        const latestDismissedTime = localStorage.getItem(
-          "pwa-prompt-dismissed",
-        );
-        const currentNow = Date.now();
-        if (
-          latestDismissedTime &&
-          currentNow - parseInt(latestDismissedTime, 10) < cooldown
-        ) {
-          return;
+    // Handle Android/Desktop Install
+    const handleInstallPrompt = async () => {
+      if (checkCooldown()) return;
+      if (globalDeferredPrompt) {
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          setDeferredPrompt(globalDeferredPrompt);
+          setShowPrompt(true);
         }
-        setShowPrompt(true);
+      }
+    };
+
+    const fallbackListener = (e: Event) => {
+      e.preventDefault();
+      globalDeferredPrompt = e;
+      handleInstallPrompt();
+    };
+
+    // If it was already caught before this component mounted
+    if (globalDeferredPrompt) {
+      handleInstallPrompt();
+    } else {
+      // Listen for our custom ready event
+      window.addEventListener("pwa-prompt-ready", handleInstallPrompt);
+      // Fallback native listener just in case
+      window.addEventListener("beforeinstallprompt", fallbackListener);
+    }
+
+    // For Apple Safari (iOS and macOS), show the prompt manually after a small delay since there's no install event
+    let timer: NodeJS.Timeout;
+    if (appleDevice) {
+      timer = setTimeout(async () => {
+        if (checkCooldown()) return;
+        const supabase = createClient();
+        const { data } = await supabase.auth.getUser();
+        if (data.user) {
+          setShowPrompt(true);
+        }
       }, 5000);
-      return () => clearTimeout(timer);
     }
 
     return () => {
-      window.removeEventListener(
-        "beforeinstallprompt",
-        handleBeforeInstallPrompt,
-      );
+      window.removeEventListener("pwa-prompt-ready", handleInstallPrompt);
+      window.removeEventListener("beforeinstallprompt", fallbackListener);
+      if (timer) clearTimeout(timer);
     };
-  }, [cooldown]);
+  }, [cooldown, pathname]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
@@ -158,31 +181,41 @@ export function PwaInstallPrompt() {
             </button>
           </div>
 
-          {isIOS ? (
-            // iOS Custom Instructions
+          {isAppleDevice ? (
+            // Apple Custom Instructions
             <div className="mt-4 bg-slate-50 rounded-xl p-3 text-xs text-slate-600 space-y-2.5 border border-slate-100">
               <p className="font-semibold text-slate-700">
-                Cara memasang di iOS Safari:
+                Cara memasang di {isIOS ? "iOS Safari" : "macOS Safari"}:
               </p>
-              <div className="flex items-start gap-2.5">
-                <div className="bg-white border border-slate-200 rounded px-1.5 py-0.5 mt-0.5 text-slate-700 font-semibold shadow-sm flex items-center justify-center">
-                  <Share2 className="w-3.5 h-3.5 text-blue-600" />
+              {isIOS ? (
+                <>
+                  <div className="flex items-start gap-2.5">
+                    <div className="bg-white border border-slate-200 rounded px-1.5 py-0.5 mt-0.5 text-slate-700 font-semibold shadow-sm flex items-center justify-center">
+                      <Share2 className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <span className="leading-snug">
+                      Tekan tombol <strong>Bagikan (Share)</strong> pada navigasi
+                      browser Anda.
+                    </span>
+                  </div>
+                  <div className="flex items-start gap-2.5">
+                    <div className="bg-white border border-slate-200 rounded px-1.5 py-0.5 mt-0.5 text-slate-700 font-semibold shadow-sm flex items-center justify-center">
+                      <Plus className="w-3.5 h-3.5 text-blue-600" />
+                    </div>
+                    <span className="leading-snug">
+                      Gulir ke bawah dan pilih opsi{" "}
+                      <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>.
+                    </span>
+                  </div>
+                </>
+              ) : (
+                <div className="flex items-start gap-2.5">
+                  <span className="leading-snug">
+                    Buka menu <strong>File</strong> di menu bar atas browser Anda, lalu pilih opsi{" "}
+                    <strong>Tambahkan ke Dock (Add to Dock)</strong>.
+                  </span>
                 </div>
-                <span className="leading-snug">
-                  Tekan tombol <strong>Bagikan (Share)</strong> pada navigasi
-                  browser Anda.
-                </span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <div className="bg-white border border-slate-200 rounded px-1.5 py-0.5 mt-0.5 text-slate-700 font-semibold shadow-sm flex items-center justify-center">
-                  <Plus className="w-3.5 h-3.5 text-blue-600" />
-                </div>
-                <span className="leading-snug">
-                  Gulir ke bawah dan pilih opsi{" "}
-                  <strong>Tambahkan ke Layar Utama (Add to Home Screen)</strong>
-                  .
-                </span>
-              </div>
+              )}
             </div>
           ) : (
             // Android/Desktop Install Action
