@@ -184,16 +184,31 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                       </span>
                     )}
                   </Link>
-                  <Link
-                    href={
-                      userRole === "proker" || userRole === "organisasi"
-                        ? "/dashboard/chat"
-                        : "/user/chat"
+                  {/* {userRole === "proker" || userRole === "organisasi" ? (
+                    <Link
+                      href="/dashboard/chat"
+                      className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full lg:hidden transition-colors"
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                    </Link>
+                  ) : (
+                    <button
+                      onClick={() =>
+                        window.dispatchEvent(new Event("openGlobalChat"))
+                      }
+                      className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full lg:hidden transition-colors"
+                    >
+                      <MessageSquare className="w-5 h-5" />
+                    </button>
+                  )} */}
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new Event("openGlobalChat"))
                     }
                     className="p-2 text-slate-500 hover:text-primary-600 hover:bg-primary-50 rounded-full lg:hidden transition-colors"
                   >
                     <MessageSquare className="w-5 h-5" />
-                  </Link>
+                  </button>
 
                   {/* Profile / Auth State */}
 
@@ -275,16 +290,33 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                     2
                   </span>
                 </Link>
-                <Link
-                  href={
-                    userRole === "proker" || userRole === "organisasi"
-                      ? "/dashboard/chat"
-                      : "/user/chat"
-                  }
+                {/* {userRole === "proker" || userRole === "organisasi" ? (
+                  <Link
+                    href="/dashboard/chat"
+                    className="p-2 text-slate-500 active:text-primary-600 relative"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                  </Link>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      window.dispatchEvent(new Event("openGlobalChat"));
+                    }}
+                    className="p-2 text-slate-500 active:text-primary-600 relative"
+                  >
+                    <MessageSquare className="w-6 h-6" />
+                  </button>
+                )} */}
+                <button
+                  onClick={() => {
+                    setIsMobileMenuOpen(false);
+                    window.dispatchEvent(new Event("openGlobalChat"));
+                  }}
                   className="p-2 text-slate-500 active:text-primary-600 relative"
                 >
                   <MessageSquare className="w-6 h-6" />
-                </Link>
+                </button>
               </>
             ) : null}
             <button

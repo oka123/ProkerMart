@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { User, Package, Bell, Ticket, PencilLine, MessageSquare } from "lucide-react";
+import {
+  User,
+  Package,
+  Bell,
+  Ticket,
+  PencilLine,
+  MessageSquare,
+} from "lucide-react";
 import Image from "next/image";
 import { LogoutButton } from "../logout-button";
 import { SwitchRoleButton } from "../switch-role-button";
@@ -44,14 +51,14 @@ const menuItems = [
     icon: Ticket,
     color: "text-primary-600",
   },
+  // {
+  //   name: "Chat Toko",
+  //   href: "#chat",
+  //   icon: MessageSquare,
+  //   color: "text-primary-500",
+  // },
   {
-    name: "Chat Toko",
-    href: "/user/chat",
-    icon: MessageSquare,
-    color: "text-primary-500",
-  },
-  {
-    name: "Bantuan & Chat",
+    name: "Bantuan & Chat Admin",
     href: "/user/bantuan",
     icon: MessageSquare,
     color: "text-emerald-500",
@@ -131,19 +138,31 @@ export function UserSidebar() {
 
             return (
               <div key={item.name} className="space-y-1">
-                <Link
-                  href={item.href}
-                  className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                    isActive && !item.subItems
-                      ? "text-primary-600"
-                      : "text-slate-800 hover:text-primary-600"
-                  }`}
-                >
-                  <Icon
-                    className={`w-4 h-4 ${isActive ? "text-primary-600" : item.color}`}
-                  />
-                  {item.name}
-                </Link>
+                {item.href === "#chat" ? (
+                  <button
+                    onClick={() =>
+                      window.dispatchEvent(new Event("openGlobalChat"))
+                    }
+                    className="flex w-full items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all text-slate-800 hover:text-primary-600"
+                  >
+                    <Icon className={`w-4 h-4 ${item.color}`} />
+                    {item.name}
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                      isActive && !item.subItems
+                        ? "text-primary-600"
+                        : "text-slate-800 hover:text-primary-600"
+                    }`}
+                  >
+                    <Icon
+                      className={`w-4 h-4 ${isActive ? "text-primary-600" : item.color}`}
+                    />
+                    {item.name}
+                  </Link>
+                )}
 
                 {/* Sub Menu */}
                 {item.subItems && (

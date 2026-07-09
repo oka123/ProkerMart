@@ -99,16 +99,31 @@ export function ChatPopup({ user, supabase }: ChatPopupProps) {
   // Fetch contacts on mount/user load
   useEffect(() => {
     if (user) {
-      fetchContacts();
+      const init = async () => {
+        await Promise.resolve();
+        fetchContacts();
+      };
+      init();
     }
   }, [user, fetchContacts]);
 
   // Refresh contact list when going back to list or opening popup
   useEffect(() => {
     if (view === "list" && isOpen && user) {
-      fetchContacts();
+      const init = async () => {
+        await Promise.resolve();
+        fetchContacts();
+      };
+      init();
     }
   }, [view, isOpen, user, fetchContacts]);
+
+  // Listen to openGlobalChat event
+  useEffect(() => {
+    const handleOpenGlobalChat = () => setIsOpen(true);
+    window.addEventListener("openGlobalChat", handleOpenGlobalChat);
+    return () => window.removeEventListener("openGlobalChat", handleOpenGlobalChat);
+  }, []);
 
   // Listen to openProkerChat event (sent from product pages or purchase pages)
   useEffect(() => {

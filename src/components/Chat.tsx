@@ -36,7 +36,11 @@ function ChatInner() {
   // Load user role once authenticated
   useEffect(() => {
     if (!user) {
-      setRole(null);
+      const init = async () => {
+        await Promise.resolve();
+        setRole(null);
+      };
+      init();
       return;
     }
     const getRole = async () => {
@@ -56,7 +60,7 @@ function ChatInner() {
     getRole();
   }, [user, supabase]);
 
-  if (loading || !user || role !== "pembeli") return null;
+  // if (loading || !user || role === "admin") return null;
 
   // Path exclusion logic
   const isExcludedPath = (path: string) => {

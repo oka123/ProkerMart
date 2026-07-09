@@ -193,12 +193,12 @@ export default function UserDashboardPage() {
     {
       title: "Chat",
       items: [
-        {
-          name: "Chat Toko",
-          icon: MessageSquare,
-          href: "/user/chat",
-          color: "text-primary-600",
-        },
+        // {
+        //   name: "Chat Toko",
+        //   icon: MessageSquare,
+        //   href: "/user/chat",
+        //   color: "text-primary-600",
+        // },
         {
           name: "Bantuan & Chat Admin",
           icon: MessageSquare,
@@ -266,9 +266,14 @@ export default function UserDashboardPage() {
                     <Link href="/cart" className="relative">
                       <ShoppingBag className="w-6 h-6" />
                     </Link>
-                    <Link href="/user/chat" className="relative">
+                    <button
+                      onClick={() =>
+                        window.dispatchEvent(new Event("openGlobalChat"))
+                      }
+                      className="relative"
+                    >
                       <MessageSquare className="w-6 h-6" />
-                    </Link>
+                    </button>
                   </div>
                 </div>
               </div>

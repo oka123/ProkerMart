@@ -106,41 +106,7 @@ function BantuanPage() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
 
-  useEffect(() => {
-    async function init() {
-      try {
-        const { data: { user }, error } = await supabase.auth.getUser();
-        if (error || !user) { router.push("/auth/login"); return; }
-        setUserId(user.id);
-        await fetchPercakapan(user.id);
-
-        // Auto-create & open chat from query params (e.g. from purchase page)
-        const autoKategori = searchParams.get("kategori");
-        const autoJudul = searchParams.get("judul");
-        const autoPesan = searchParams.get("pesan");
-        if (autoKategori && autoJudul && autoPesan) {
-          const { data: newConv, error: convErr } = await supabase
-            .from("percakapan")
-            .insert({ judul: autoJudul, kategori: autoKategori, status: "aktif", id_pengguna: user.id, role_konteks: "pembeli" })
-            .select()
-            .single();
-          if (!convErr && newConv) {
-            await supabase.from("pesan_chat").insert({ id_percakapan: newConv.id, id_pengirim: user.id, isi: autoPesan, is_admin: false });
-            await fetchPercakapan(user.id);
-            // openChat will be called after state is set — use a small delay
-            setTimeout(() => openChat(newConv), 100);
-          }
-        }
-      } catch (err) {
-        console.error("[Bantuan - Init] Error:", err);
-      } finally {
-        setIsLoading(false);
-      }
-    }
-    init();
-  }, []);
-
-  const fetchPercakapan = async (uid: string) => {
+  const fetchPercakapan = useCallback(async (uid: string) => {
     try {
       const { data, error } = await supabase
         .from("percakapan")
@@ -153,7 +119,7 @@ function BantuanPage() {
     } catch (err) {
       console.error("[Bantuan - FetchPercakapan] Error:", err);
     }
-  };
+  }, [supabase]);
 
   const openChat = useCallback(async (p: Percakapan) => {
     setSelected(p);
@@ -190,6 +156,40 @@ function BantuanPage() {
       .subscribe();
     channelRef.current = ch;
   }, [supabase]);
+
+  useEffect(() => {
+    async function init() {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (error || !user) { router.push("/auth/login"); return; }
+        setUserId(user.id);
+        await fetchPercakapan(user.id);
+
+        // Auto-create & open chat from query params (e.g. from purchase page)
+        const autoKategori = searchParams.get("kategori");
+        const autoJudul = searchParams.get("judul");
+        const autoPesan = searchParams.get("pesan");
+        if (autoKategori && autoJudul && autoPesan) {
+          const { data: newConv, error: convErr } = await supabase
+            .from("percakapan")
+            .insert({ judul: autoJudul, kategori: autoKategori, status: "aktif", id_pengguna: user.id, role_konteks: "pembeli" })
+            .select()
+            .single();
+          if (!convErr && newConv) {
+            await supabase.from("pesan_chat").insert({ id_percakapan: newConv.id, id_pengirim: user.id, isi: autoPesan, is_admin: false });
+            await fetchPercakapan(user.id);
+            // openChat will be called after state is set — use a small delay
+            setTimeout(() => openChat(newConv), 100);
+          }
+        }
+      } catch (err) {
+        console.error("[Bantuan - Init] Error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    init();
+  }, [router, searchParams, supabase, fetchPercakapan, openChat]);
 
   useEffect(() => {
     if (pesanList.length > 0) {
@@ -280,7 +280,7 @@ function BantuanPage() {
       <main className="flex-1 w-full px-0 py-0 mx-auto max-w-7xl md:px-4 lg:px-8 md:py-6">
         <div className="hidden lg:flex items-center gap-2 mb-4 px-4 py-3 bg-blue-50 border border-blue-100 rounded-xl text-sm text-blue-700">
           <MessageSquare className="w-4 h-4 shrink-0" />
-          <span>Halaman ini untuk chat dukungan dengan admin. Untuk chat dengan toko, buka <a href="/user/chat" className="font-semibold underline">Chat Toko</a>.</span>
+          <span>Halaman ini untuk chat dukungan dengan admin. Untuk chat dengan toko, buka <button onClick={() => window.dispatchEvent(new Event("openGlobalChat"))} className="font-semibold underline">Chat Toko</button>.</span>
         </div>
         <div className="lg:flex lg:gap-6 h-full">
           <aside className="hidden lg:block shrink-0">
@@ -406,7 +406,7 @@ function ListViewMobile({
       <MobileHeader title="Bantuan Admin" backHref="/user" rightActions={[]} />
       <div className="flex items-center gap-2 px-4 py-3 bg-blue-50 border-b border-blue-100 text-xs text-blue-700">
         <MessageSquare className="w-4 h-4 shrink-0" />
-        <span>Chat dukungan dengan admin. Untuk chat toko, buka <a href="/user/chat" className="font-semibold underline">Chat Toko</a>.</span>
+        <span>Chat dukungan dengan admin. Untuk chat toko, buka <button onClick={() => window.dispatchEvent(new Event("openGlobalChat"))} className="font-semibold underline">Chat Toko</button>.</span>
       </div>
       <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-slate-100">
         <span className="text-sm font-semibold text-slate-700">Percakapan Saya</span>
