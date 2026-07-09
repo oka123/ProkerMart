@@ -1,7 +1,7 @@
 -- 10. Push Subscriptions
 CREATE TABLE IF NOT EXISTS push_subscriptions (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    id_pengguna UUID NOT NULL REFERENCES pengguna(id_pengguna) ON DELETE CASCADE,
+    id_pengguna UUID REFERENCES pengguna(id_pengguna) ON DELETE CASCADE,
     endpoint TEXT NOT NULL,
     p256dh TEXT NOT NULL,
     auth TEXT NOT NULL,
