@@ -230,9 +230,10 @@ export function Navbar({ variant = "default" }: NavbarProps) {
                         >
                           <Link
                             href="/user"
-                            className="flex items-center gap-3 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-primary-600"
+                            className="flex items-center gap-2 px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-primary-600"
                             onClick={() => setIsUserMenuOpen(false)}
                           >
+                            <User className="w-5 h-5" />
                             Akun Saya
                           </Link>
                           <Link
@@ -339,24 +340,6 @@ export function Navbar({ variant = "default" }: NavbarProps) {
             className="md:hidden border-t border-slate-200 bg-white shadow-xl"
           >
             <div className="px-4 pt-4 pb-6 space-y-2">
-              {!loading && user ? (
-                <Link
-                  href="/user"
-                  className="flex items-center gap-3 px-4 py-3 rounded-lg text-base font-semibold  active:bg-primary-100 transition-colors"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  <User className="w-5 h-5" />
-                  Akun Saya
-                </Link>
-              ) : (
-                <Link
-                  href="/auth/login"
-                  className="block px-4 py-2 rounded-md text-base font-semibold text-primary-600 hover:bg-slate-50"
-                  onClick={() => setIsMobileMenuOpen(false)}
-                >
-                  Masuk
-                </Link>
-              )}
               <Link
                 href="/explore"
                 className={`block px-4 py-2 rounded-md text-base ${
@@ -379,6 +362,59 @@ export function Navbar({ variant = "default" }: NavbarProps) {
               >
                 Organisasi
               </Link>
+
+              <div className="h-px bg-slate-200 my-2"></div>
+
+              {!loading && user ? (
+                <>
+                  <Link
+                    href="/user"
+                    className="flex items-center gap-2 px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <User className="w-5 h-5" />
+                    Akun Saya
+                  </Link>
+                  <Link
+                    href="/user/purchase"
+                    className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Pesanan Saya
+                  </Link>
+                  <SwitchRoleButton
+                    currentRoute="/explore"
+                    className="flex w-full px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50 text-left"
+                    onNavigate={() => setIsMobileMenuOpen(false)}
+                  />
+                  <button
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      logout();
+                    }}
+                    className="block w-full text-left px-4 py-2 rounded-md text-base font-medium text-red-600 hover:bg-red-50"
+                  >
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href="/auth/login"
+                    className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Masuk
+                  </Link>
+                  <Link
+                    href="/auth/sign-up"
+                    className="block px-4 py-2 rounded-md text-base font-medium text-slate-700 hover:text-primary-600 hover:bg-slate-50"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    Daftar
+                  </Link>
+                </>
+              )}
             </div>
           </motion.div>
         )}

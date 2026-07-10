@@ -113,7 +113,7 @@ export default function SelectRolePage() {
                 style={{ touchAction: "manipulation" }}
                 className="flex items-center gap-5 p-5 text-left transition-all bg-white border-2 border-slate-200 dark:bg-slate-900 dark:border-slate-700 rounded-2xl hover:border-primary-400 dark:hover:border-primary-500 hover:shadow-lg hover:shadow-primary-100 dark:hover:shadow-primary-900/20 group"
               >
-                <div className="flex items-center justify-center flex-shrink-0 w-14 h-14 transition-colors border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30 group-hover:border-primary-100 dark:group-hover:border-primary-800 group-hover:text-primary-600 dark:group-hover:text-primary-400">
+                <div className="flex items-center justify-center shrink-0 w-14 h-14 transition-colors border rounded-xl bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400 group-hover:bg-primary-50 dark:group-hover:bg-primary-900/30 group-hover:border-primary-100 dark:group-hover:border-primary-800 group-hover:text-primary-600 dark:group-hover:text-primary-400">
                   {option.icon}
                 </div>
                 <div>

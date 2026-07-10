@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useEffect, useState } from "react";
@@ -47,6 +48,12 @@ export default function UserDashboardPage() {
   });
 
   const [voucherCount, setVoucherCount] = useState(0);
+
+  const [unreadNotifs, setUnreadNotifs] = useState({
+    order: false,
+    promo: false,
+    info: false,
+  });
 
   useEffect(() => {
     async function fetchDashboardData() {
@@ -115,6 +122,24 @@ export default function UserDashboardPage() {
           .eq("status_pakai", false);
 
         setVoucherCount(vCount || 0);
+
+        // Fetch Unread Notifications
+        const { data: notifData } = await supabase
+          .from("notifikasi")
+          .select("judul")
+          .eq("id_pengguna", user.id)
+          .eq("status_dibaca", false);
+
+        if (notifData) {
+          const unread = { order: false, promo: false, info: false };
+          notifData.forEach((n) => {
+            const t = n.judul.toLowerCase();
+            if (t.includes("pesan")) unread.order = true;
+            else if (t.includes("promo")) unread.promo = true;
+            else unread.info = true;
+          });
+          setUnreadNotifs(unread);
+        }
       } catch (error) {
         console.error("Failed to fetch dashboard data:", error);
       } finally {
@@ -164,18 +189,21 @@ export default function UserDashboardPage() {
           icon: Bell,
           href: "/user/notifications/order",
           color: "text-orange-500",
+          hasUnread: unreadNotifs.order,
         },
         {
           name: "Promosi",
           icon: Ticket,
           href: "/user/notifications/promotion",
           color: "text-red-500",
+          hasUnread: unreadNotifs.promo,
         },
         {
           name: "Info",
           icon: Info,
           href: "/user/notifications/info",
           color: "text-blue-500",
+          hasUnread: unreadNotifs.info,
         },
       ],
     },
@@ -334,7 +362,15 @@ export default function UserDashboardPage() {
                           className="flex items-center justify-between p-4 transition-colors active:bg-slate-50"
                         >
                           <div className="flex items-center gap-3">
-                            <item.icon className={`w-5 h-5 ${item.color}`} />
+                            <div className="relative">
+                              <item.icon className={`w-5 h-5 ${item.color}`} />
+                              {(item as any).hasUnread && (
+                                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-red-500 border border-white"></span>
+                                </span>
+                              )}
+                            </div>
                             <span className="text-sm text-slate-700">
                               {item.name}
                             </span>

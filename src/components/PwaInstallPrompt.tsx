@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Download, X, Share2, Plus, Smartphone } from "lucide-react";
@@ -21,6 +21,8 @@ if (typeof window !== "undefined") {
 // For Framer Motion, since we're rendering client-side
 export function PwaInstallPrompt() {
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  // Ref mirrors state — always holds the latest prompt even across async boundaries
+  const deferredPromptRef = useRef<any>(null);
   const [showPrompt, setShowPrompt] = useState(false);
   const [isAppleDevice, setIsAppleDevice] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
@@ -29,6 +31,25 @@ export function PwaInstallPrompt() {
 
   // const cooldown = 1 * 24 * 60 * 60 * 1000; // 1 day
   const cooldown = 0;
+
+  // Persistent listener: update ref+state whenever a new beforeinstallprompt fires
+  // This is critical because registering a Service Worker (e.g. from PushNotificationManager)
+  // invalidates the previously captured prompt — Chrome then fires a new one.
+  useEffect(() => {
+    const handleNewPrompt = () => {
+      if (globalDeferredPrompt) {
+        deferredPromptRef.current = globalDeferredPrompt;
+        setDeferredPrompt(globalDeferredPrompt);
+        console.log("[PWA] New beforeinstallprompt captured");
+      }
+    };
+    window.addEventListener("pwa-prompt-ready", handleNewPrompt);
+    // Also hydrate from already-captured global in case component mounted late
+    if (globalDeferredPrompt && !deferredPromptRef.current) {
+      handleNewPrompt();
+    }
+    return () => window.removeEventListener("pwa-prompt-ready", handleNewPrompt);
+  }, []);
 
   // Check cooldown on route/pathname change
   useEffect(() => {
@@ -87,6 +108,8 @@ export function PwaInstallPrompt() {
         const supabase = createClient();
         const { data } = await supabase.auth.getUser();
         if (data.user) {
+          // Update both ref (immediate) and state (for render)
+          deferredPromptRef.current = globalDeferredPrompt;
           setDeferredPrompt(globalDeferredPrompt);
           setShowPrompt(true);
         }
@@ -130,12 +153,20 @@ export function PwaInstallPrompt() {
   }, [cooldown, pathname]);
 
   const handleInstallClick = async () => {
-    if (!deferredPrompt) return;
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    console.log(`[PWA] Install prompt outcome: ${outcome}`);
-    setDeferredPrompt(null);
-    setShowPrompt(false);
+    // Prefer state value, but fall back to ref in case of React async state lag
+    const prompt = deferredPrompt || deferredPromptRef.current || globalDeferredPrompt;
+    if (!prompt) return;
+    try {
+      prompt.prompt();
+      const { outcome } = await prompt.userChoice;
+      console.log(`[PWA] Install prompt outcome: ${outcome}`);
+    } catch (e) {
+      console.error("[PWA] prompt() failed:", e);
+    } finally {
+      deferredPromptRef.current = null;
+      setDeferredPrompt(null);
+      setShowPrompt(false);
+    }
   };
 
   const handleDismiss = () => {

@@ -1,37 +1,101 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-// Utility function to convert VAPID key for cross-browser support
-function urlBase64ToUint8Array(base64String: string) {
+// Utility function to convert VAPID key — handles padding and charset normalization
+function urlBase64ToUint8Array(base64String: string): Uint8Array {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
-  const base64 = (base64String + padding)
-    .replace(/\-/g, "+")
-    .replace(/_/g, "/");
-
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
   const rawData = window.atob(base64);
   const outputArray = new Uint8Array(rawData.length);
-
   for (let i = 0; i < rawData.length; ++i) {
     outputArray[i] = rawData.charCodeAt(i);
   }
   return outputArray;
 }
 
-// Fallback for Safari's older callback-based API
-async function requestNotificationPermission() {
-  if (!("Notification" in window)) return "denied";
-
-  if (Notification.permission === "granted") return "granted";
-
+// Cross-browser safe subscription key extraction
+// Safari / WebKit returns ArrayBuffer for keys, not strings
+function extractSubscriptionKeys(
+  sub: PushSubscription,
+): { p256dh: string; auth: string } | null {
   try {
-    return await Notification.requestPermission();
-  } catch {
-    return new Promise((resolve) => {
-      Notification.requestPermission((result) => resolve(result));
-    });
+    const json = sub.toJSON();
+    if (json.keys?.p256dh && json.keys?.auth) {
+      return { p256dh: json.keys.p256dh, auth: json.keys.auth };
+    }
+    // Fallback: manually extract from ArrayBuffer (Safari WebKit quirk)
+    const p256dhBuffer = sub.getKey("p256dh");
+    const authBuffer = sub.getKey("auth");
+    if (!p256dhBuffer || !authBuffer) return null;
+
+    const p256dh = btoa(String.fromCharCode(...new Uint8Array(p256dhBuffer)));
+    const auth = btoa(String.fromCharCode(...new Uint8Array(authBuffer)));
+    return { p256dh, auth };
+  } catch (e) {
+    console.error("[Push] Failed to extract subscription keys:", e);
+    return null;
+  }
+}
+
+// Register subscription to backend
+async function registerSubscription(
+  subscription: PushSubscription,
+  userId: string,
+) {
+  const keys = extractSubscriptionKeys(subscription);
+  if (!keys) {
+    console.error("[Push] Could not extract subscription keys");
+    return;
+  }
+
+  const res = await fetch("/api/push/subscribe", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      subscription: { endpoint: subscription.endpoint, keys },
+      userId,
+    }),
+  });
+
+  if (!res.ok) {
+    const errData = await res.json();
+    console.error("[Push] API error:", errData);
+  }
+}
+
+// Subscribe to push after permission is already granted
+// This is safe to call from non-gesture context since permission is pre-granted
+async function subscribePush(userId: string) {
+  try {
+    if (!("PushManager" in window)) {
+      console.warn("[Push] PushManager not available");
+      return;
+    }
+
+    const registration = await navigator.serviceWorker.register("/sw.js");
+    await navigator.serviceWorker.ready;
+
+    let subscription = await registration.pushManager.getSubscription();
+    if (!subscription) {
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!vapidPublicKey) {
+        console.error("[Push] VAPID public key missing");
+        return;
+      }
+      subscription = await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(
+          vapidPublicKey,
+        ) as unknown as ArrayBuffer,
+      });
+    }
+
+    await registerSubscription(subscription, userId);
+  } catch (err) {
+    console.error("[Push] subscribePush failed:", err);
   }
 }
 
@@ -39,14 +103,23 @@ export function PushNotificationManager() {
   const [showPrompt, setShowPrompt] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [user, setUser] = useState<any>(null);
+  const [isRequesting, setIsRequesting] = useState(false);
   const pathname = usePathname();
+  const hasCheckedRef = useRef(false);
 
   useEffect(() => {
+    // Reset check flag on route change so it runs once per page visit
+    hasCheckedRef.current = false;
+  }, [pathname]);
+
+  useEffect(() => {
+    if (hasCheckedRef.current) return;
+    hasCheckedRef.current = true;
+
     async function checkPermission() {
       if (
         typeof window === "undefined" ||
         !("serviceWorker" in navigator) ||
-        !("PushManager" in window) ||
         !("Notification" in window)
       ) {
         return;
@@ -54,81 +127,76 @@ export function PushNotificationManager() {
 
       const supabase = createClient();
       const { data } = await supabase.auth.getUser();
-      if (!data.user) return; // Must be logged in
+      if (!data.user) return;
       setUser(data.user);
 
+      // If user dismissed before, skip
+      const dismissed = localStorage.getItem("pushPromptDismissed");
+      if (dismissed) return;
+
       if (Notification.permission === "granted") {
-        // If already granted, we can safely setup push silently
-        setupPush(data.user);
+        // Already granted — silently re-subscribe
+        subscribePush(data.user.id);
       } else if (Notification.permission === "default") {
-        // Check if user has previously dismissed the prompt (using localStorage)
-        const dismissed = localStorage.getItem("pushPromptDismissed");
-        if (!dismissed) {
-          setShowPrompt(true);
-        }
+        // Show banner — permission will be requested on click (user gesture)
+        setShowPrompt(true);
       }
+      // "denied" — do nothing, respect user choice
     }
 
     checkPermission();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pathname]);
 
-  async function setupPush(currentUser = user) {
-    try {
-      const registration = await navigator.serviceWorker.register("/sw.js");
-      await navigator.serviceWorker.ready;
+  /**
+   * iOS FIX: Notification.requestPermission() MUST be called synchronously
+   * as the VERY FIRST operation in a click handler (user gesture).
+   *
+   * Any async operation (await) before requestPermission() will break the
+   * user gesture chain on iOS/Safari, resulting in "NotAllowedError".
+   *
+   * Strategy:
+   * 1. Call Notification.requestPermission() as a Promise (not await) first
+   * 2. In the .then() callback, proceed with SW registration and push subscribe
+   */
+  const handleActivate = () => {
+    if (!user?.id || isRequesting) return;
+    setIsRequesting(true);
 
-      // Ask for permission ONLY here, triggered by user gesture (or silently if already granted)
-      const permission = await requestNotificationPermission();
+    // Step 1: SYNCHRONOUSLY kick off the permission request (no await before this!)
+    // This preserves the user gesture context required by iOS Safari.
+    const permissionPromise = Notification.requestPermission();
 
-      if (permission === "granted") {
-        let subscription = await registration.pushManager.getSubscription();
-
-        if (!subscription) {
-          const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-          if (!vapidPublicKey) return;
-
-          const applicationServerKey = urlBase64ToUint8Array(vapidPublicKey);
-
-          subscription = await registration.pushManager.subscribe({
-            userVisibleOnly: true,
-            applicationServerKey,
-          });
+    // Step 2: Handle the result — this runs after browser shows permission dialog
+    permissionPromise
+      .then(async (permission) => {
+        if (permission !== "granted") {
+          console.warn("[Push] Permission not granted:", permission);
+          localStorage.setItem("pushPromptDismissed", Date.now().toString());
+          setShowPrompt(false);
+          return;
         }
 
-        const res = await fetch("/api/push/subscribe", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subscription: subscription.toJSON(),
-            userId: currentUser.id, // Enforce non-null ID
-          }),
-        });
-
-        if (!res.ok) {
-          const errData = await res.json();
-          console.error("API error response:", errData);
-        }
-
+        // Step 3: Permission granted — now safe to do async SW + push subscribe
+        await subscribePush(user.id);
+      })
+      .catch((err) => {
+        console.error("[Push] requestPermission failed:", err);
+      })
+      .finally(() => {
+        setIsRequesting(false);
         setShowPrompt(false);
-      } else {
-        // Handle denied
-        setShowPrompt(false);
-      }
-    } catch (err) {
-      console.error("Failed to setup push notifications:", err);
-    }
-  }
+      });
+  };
 
   const handleDismiss = () => {
-    localStorage.setItem("pushPromptDismissed", "true");
+    localStorage.setItem("pushPromptDismissed", Date.now().toString());
     setShowPrompt(false);
   };
 
   if (!showPrompt) return null;
 
   return (
-    <div className="fixed bottom-6 left-4 md:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 p-4 z-50 flex items-start gap-4 animate-in slide-in-from-bottom-5">
+    <div className="fixed bottom-6 left-4 right-4 md:right-auto md:w-96 bg-white rounded-xl shadow-2xl border border-slate-100 p-4 z-120 flex items-start gap-4 animate-in slide-in-from-bottom-5">
       <div className="w-10 h-10 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center shrink-0">
         <svg
           xmlns="http://www.w3.org/2000/svg"
@@ -154,13 +222,15 @@ export function PushNotificationManager() {
         </p>
         <div className="flex gap-2">
           <button
-            onClick={() => setupPush(user)}
-            className="px-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors"
+            onClick={handleActivate}
+            disabled={isRequesting}
+            className="px-3 py-1.5 bg-primary-600 text-white text-xs font-medium rounded-lg hover:bg-primary-700 transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            Aktifkan
+            {isRequesting ? "Meminta izin..." : "Aktifkan"}
           </button>
           <button
             onClick={handleDismiss}
+            disabled={isRequesting}
             className="px-3 py-1.5 bg-slate-100 text-slate-600 text-xs font-medium rounded-lg hover:bg-slate-200 transition-colors"
           >
             Nanti Saja

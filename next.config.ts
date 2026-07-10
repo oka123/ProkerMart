@@ -15,11 +15,23 @@ const localIPs = getLocalIPs();
 console.log("Local IPs:", localIPs);
 
 const nextConfig: NextConfig = {
+  // Tambahkan wildcard domain dari Cloudflare dan Ngrok
   allowedDevOrigins: [
     ...localIPs,
     "localhost",
-    "subarytenoidal-ronna-nondeistically.ngrok-free.dev",
+    "*.ngrok-free.dev",
+    "*.trycloudflare.com",
   ],
+
+  // PENTING: Jika Anda menggunakan Server Actions (Next.js 14+),
+  // Anda wajib mengizinkan origin tunnel di sini agar form/mutasi tidak error.
+  // serverExternalPackages: [], // (opsional, biarkan jika tidak butuh)
+  // experimental: {
+  //   serverActions: {
+  //     allowedOrigins: ["localhost:3000", "*.loca.lt", "*.ngrok-free.dev"],
+  //   },
+  // },
+
   images: {
     dangerouslyAllowSVG: true,
     remotePatterns: [

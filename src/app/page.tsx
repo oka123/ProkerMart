@@ -18,12 +18,17 @@ export default function Home() {
   const [isLoadingTrending, setIsLoadingTrending] = useState(true);
 
   useEffect(() => {
+    // Only check if we are already logged in to prefetch access, but do not redirect.
+    // The role switching is now handled via the navbar.
     const supabase = createClient();
     supabase.auth.getUser().then(async ({ data: { user } }) => {
       if (!user) return;
-      const access = await fetchUserAccess(supabase, user.email!);
-      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
-      router.push(targetRoute);
+      // const access = await fetchUserAccess(supabase, user.email!);
+      // const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
+      // router.push(targetRoute);
+
+      // We can fetch access here to cache it for the navbar, but we do NOT redirect.
+      await fetchUserAccess(supabase, user.email!);
     });
   }, [router]);
 

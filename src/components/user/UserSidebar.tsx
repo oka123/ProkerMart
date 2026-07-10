@@ -73,6 +73,7 @@ export function UserSidebar() {
     name: "Loading...",
     foto: "https://placehold.co/100x100?text=User",
   });
+  const [hasUnreadNotif, setHasUnreadNotif] = useState(false);
 
   useEffect(() => {
     async function fetchSidebarProfile() {
@@ -93,6 +94,13 @@ export function UserSidebar() {
               pengguna.foto_profil || "https://placehold.co/100x100?text=User",
           });
         }
+
+        const { count } = await supabase
+          .from("notifikasi")
+          .select("*", { count: "exact", head: true })
+          .eq("id_pengguna", user.id)
+          .eq("status_dibaca", false);
+        setHasUnreadNotif((count ?? 0) > 0);
       }
     }
     fetchSidebarProfile();
@@ -157,9 +165,17 @@ export function UserSidebar() {
                         : "text-slate-800 hover:text-primary-600"
                     }`}
                   >
-                    <Icon
-                      className={`w-4 h-4 ${isActive ? "text-primary-600" : item.color}`}
-                    />
+                    <div className="relative">
+                      <Icon
+                        className={`w-4 h-4 ${isActive ? "text-primary-600" : item.color}`}
+                      />
+                      {item.name === "Notifikasi" && hasUnreadNotif && (
+                        <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                          <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500 border border-white"></span>
+                        </span>
+                      )}
+                    </div>
                     {item.name}
                   </Link>
                 )}

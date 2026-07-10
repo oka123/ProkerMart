@@ -63,8 +63,12 @@ function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
         console.debug("[Login] access:", access);
       }
 
-      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
-      router.push(targetRoute);
+      // const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
+      // router.push(targetRoute);
+
+      // Selalu arahkan ke halaman utama ("/") setelah login,
+      // role selection dilakukan via Navbar (SwitchRoleButton).
+      router.push("/");
     } catch (err: unknown) {
       setError(
         err instanceof Error ? err.message : "Email atau password salah.",

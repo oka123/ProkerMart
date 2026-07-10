@@ -6,11 +6,13 @@
     "dev": "next dev",
     "dev-https": "next dev --experimental-https",
     "dev-local": "next dev -H localhost",
+    "dev-https-local": "next dev --experimental-https -H localhost",
     "dev-no-refresh": "next dev --no-server-fast-refresh",
     "build": "rm -rf .next && next build",
     "start": "next start",
     "lint": "eslint .",
-    "db:push": "supabase db push"
+    "db:push": "supabase db push",
+    "tunnel": "npx cloudflared tunnel --url http://localhost:3000"
   },
   "dependencies": {
     "@radix-ui/react-checkbox": "^1.3.4",

@@ -9,13 +9,22 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Invalid subscription data or missing endpoint" }, { status: 400 });
     }
 
+    if (!userId) {
+      return NextResponse.json({ error: "userId is required" }, { status: 400 });
+    }
+
+    // Validate keys exist
+    if (!subscription.keys?.p256dh || !subscription.keys?.auth) {
+      return NextResponse.json({ error: "Subscription keys (p256dh, auth) are required" }, { status: 400 });
+    }
+
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const { error } = await supabase.from("push_subscriptions").upsert(
       {
-        id_pengguna: userId || null,
+        id_pengguna: userId,
         endpoint: subscription.endpoint,
         p256dh: subscription.keys.p256dh,
         auth: subscription.keys.auth,
