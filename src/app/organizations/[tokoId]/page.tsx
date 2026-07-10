@@ -53,7 +53,7 @@ function TokoDetailContent() {
             nama_toko,
             deskripsi,
             logo,
-            organisasi ( nama_organisasi ),
+            organisasi ( nama_organisasi, logo, deskripsi ),
             sub_toko (
               id_sub_toko,
               nama_proker,
@@ -100,8 +100,8 @@ function TokoDetailContent() {
         setToko({
           id: data.id_toko,
           name: data.nama_toko,
-          description: data.deskripsi || "Belum ada deskripsi",
-          logo: data.logo,
+          description: (org && org.deskripsi) ? org.deskripsi : (data.deskripsi || "Belum ada deskripsi"),
+          logo: org ? org.logo : data.logo,
           organisasiName: org ? org.nama_organisasi : "Unknown",
           subTokos: subTokos,
           allProducts: allProducts,

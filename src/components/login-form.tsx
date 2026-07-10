@@ -63,7 +63,13 @@ function LoginFormInner({ redirectTo }: { redirectTo?: string }) {
         console.debug("[Login] access:", access);
       }
 
-      const targetRoute = access?.needsSelection ? "/auth/select-role" : "/";
+      let targetRoute = "/explore";
+      if (access?.hasProker && !access?.hasOrganisasi) {
+        targetRoute = "/dashboard";
+      } else if (access?.needsSelection) {
+        targetRoute = "/auth/select-role";
+      }
+      
       router.push(targetRoute);
     } catch (err: unknown) {
       setError(

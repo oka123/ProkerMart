@@ -25,6 +25,8 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
     organisasi,
   } = toko;
   const orgName = organisasi?.nama_organisasi ?? "Organisasi";
+  const displayLogo = organisasi?.logo || logo;
+  const displayDeskripsi = organisasi?.deskripsi || tokoDeskripsi || "Toko resmi organisasi mahasiswa untuk memasarkan berbagai produk berkualitas.";
 
   // Create links for navigation
   const tokoUrl = `/organizations/${id_toko}`;
@@ -52,10 +54,10 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
         <div className="flex flex-col justify-between p-4 rounded-xl bg-slate-50 border border-slate-100">
           <div>
             <div className="flex items-center gap-3 mb-3">
-              {logo ? (
+              {displayLogo ? (
                 <div className="w-12 h-12 rounded-full border border-slate-200 overflow-hidden relative shrink-0">
                   <Image
-                    src={logo}
+                    src={displayLogo}
                     alt={nama_toko}
                     fill
                     className="object-cover"
@@ -77,8 +79,7 @@ export function SellerCard({ sellerInfo }: SellerCardProps) {
               </div>
             </div>
             <p className="text-xs text-slate-500 leading-relaxed line-clamp-3 mb-4">
-              {tokoDeskripsi ??
-                "Toko resmi organisasi mahasiswa untuk memasarkan berbagai produk berkualitas."}
+              {displayDeskripsi}
             </p>
           </div>
 

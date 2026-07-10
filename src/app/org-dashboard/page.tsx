@@ -162,7 +162,7 @@ export default function OrgDashboardPage() {
       icon: TrendingUp,
     },
     {
-      name: "Total Toko (Proker)",
+      name: "Total Sub-Toko (Proker)",
       value: `${stats.activeSubToko} Aktif`,
       change: `${stats.totalSubToko} Total`,
       icon: Store,
@@ -256,12 +256,6 @@ export default function OrgDashboardPage() {
             (Rekap Toko Organisasi).
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 shrink-0"
-        >
-          <Plus className="w-4 h-4" /> Daftarkan Proker Baru
-        </button>
       </div>
 
       {/* Aggregate Stats Grid */}
@@ -385,22 +379,22 @@ export default function OrgDashboardPage() {
             <h2 className="text-lg font-bold text-slate-900">Aksi Cepat</h2>
           </div>
           <div className="p-6 flex-1 flex flex-col gap-4">
-            <button
-              onClick={() => setIsModalOpen(true)}
+            <Link
+              href="/org-dashboard/stores"
               className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-200 hover:bg-primary-50 hover:border-primary-200 transition-colors group text-left w-full"
             >
               <div className="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center shrink-0">
-                <Plus className="w-5 h-5 text-slate-600 group-hover:text-primary-600" />
+                <Store className="w-5 h-5 text-slate-600 group-hover:text-primary-600" />
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-sm mb-1">
-                  Daftarkan Proker Baru
+                  Kelola Sub-Toko (Proker)
                 </h3>
                 <p className="text-xs text-slate-500">
-                  Buat sub-toko baru untuk program kerja
+                  Manajemen dan daftarkan proker baru
                 </p>
               </div>
-            </button>
+            </Link>
 
             <Link
               href="/org-dashboard/members"

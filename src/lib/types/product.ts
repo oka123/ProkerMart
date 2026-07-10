@@ -14,6 +14,8 @@ export interface SubTokoInfo {
     organisasi: {
       id_organisasi: string;
       nama_organisasi: string;
+      logo?: string;
+      deskripsi?: string;
     };
   };
 }

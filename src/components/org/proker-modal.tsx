@@ -216,7 +216,7 @@ export function ProkerModal({
                 >
                   <option value="active">Aktif</option>
                   <option value="suspended">Ditangguhkan</option>
-                  <option value="inactive">Selesai</option>
+                  <option value="inactive">Nonaktif</option>
                 </select>
               </div>
 

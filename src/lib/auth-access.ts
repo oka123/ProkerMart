@@ -20,7 +20,7 @@ export async function fetchUserAccess(
 
   if (!pengguna) return null;
 
-  const [orgResult, orgMemberResult, prokerResult] = await Promise.all([
+  const [orgResult, allOrgMemberships, prokerResult] = await Promise.all([
     supabase
       .from("organisasi")
       .select("id_pengguna")
@@ -28,10 +28,8 @@ export async function fetchUserAccess(
       .maybeSingle(),
     supabase
       .from("organisasi_member")
-      .select("id_member")
-      .eq("id_pengguna", pengguna.id_pengguna)
-      .limit(1)
-      .maybeSingle(),
+      .select("id_sub_toko")
+      .eq("id_pengguna", pengguna.id_pengguna),
     supabase
       .from("sub_toko_member")
       .select("id_member")
@@ -41,8 +39,14 @@ export async function fetchUserAccess(
       .maybeSingle(),
   ]);
 
+  const orgMembers = allOrgMemberships.data || [];
+  const isCoreOrg = orgMembers.some((m) => !m.id_sub_toko);
+  // isProkerOrg: only counts if they are also in sub_toko_member (actual proker manager)
+  // Having an id_sub_toko in organisasi_member just means they were assigned to help a proker
+  // but the actual dashboard access is controlled by sub_toko_member
+
   // Fallback to role field if no member records exist yet
-  const hasOrganisasi = !!orgResult.data || !!orgMemberResult?.data || pengguna.role === "organisasi";
+  const hasOrganisasi = !!orgResult.data || isCoreOrg || pengguna.role === "organisasi";
   const hasProker = !!prokerResult.data || pengguna.role === "proker";
 
   return {

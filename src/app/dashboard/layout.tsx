@@ -54,7 +54,7 @@ export default function DashboardLayout({
       const { data } = await supabase
         .from("sub_toko_member")
         .select(
-          "id_member, id_sub_toko, role, sub_toko(nama_proker, toko(organisasi(nama_organisasi)))",
+          "id_member, id_sub_toko, role, sub_toko(nama_proker, toko(organisasi(nama_organisasi, logo)))",
         )
         .eq("id_pengguna", session.user.id)
         .eq("status", "active");
@@ -73,6 +73,7 @@ export default function DashboardLayout({
           role: row.role ?? "",
           nama_proker: st?.nama_proker ?? "—",
           nama_org: org?.nama_organisasi ?? "—",
+          logo: org?.logo || undefined,
         };
       });
 
@@ -132,9 +133,17 @@ export default function DashboardLayout({
 
             {/* Current proker info */}
             <div className="flex items-center gap-3 bg-slate-50 p-3 rounded-lg border border-slate-100">
-              <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-xs shrink-0">
-                {initials}
-              </div>
+              {active?.logo ? (
+                <img
+                  src={active.logo}
+                  alt={active.nama_org}
+                  className="w-10 h-10 rounded-full object-cover shrink-0 bg-white border border-slate-200"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-primary-100 rounded-full flex items-center justify-center text-primary-600 font-bold text-xs shrink-0">
+                  {initials}
+                </div>
+              )}
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-bold text-slate-900 truncate">
                   {active?.nama_org ?? "—"}
@@ -372,6 +381,22 @@ export default function DashboardLayout({
                                 onClick={() => handleSelect(opt)}
                                 className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors text-left"
                               >
+                                {opt.logo ? (
+                                  <img
+                                    src={opt.logo}
+                                    alt={opt.nama_org}
+                                    className="w-8 h-8 rounded-full object-cover shrink-0 bg-white"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 rounded-full bg-primary-100 text-primary-600 flex items-center justify-center text-xs font-bold shrink-0">
+                                    {opt.nama_org
+                                      .split(" ")
+                                      .map((w: string) => w[0])
+                                      .join("")
+                                      .slice(0, 2)
+                                      .toUpperCase()}
+                                  </div>
+                                )}
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-semibold text-slate-800 truncate">
                                     {opt.nama_org}

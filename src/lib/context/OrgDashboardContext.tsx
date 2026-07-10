@@ -11,13 +11,19 @@ export interface OrgDashboardData {
   id_toko: string;
   nama_toko: string;
   email: string;
+  unreadNotifications: number;
+  logo?: string;
 }
 
 interface OrgDashboardContextValue {
   org: OrgDashboardData | null;
+  refreshOrg: () => void;
 }
 
-export const OrgDashboardContext = createContext<OrgDashboardContextValue>({ org: null });
+export const OrgDashboardContext = createContext<OrgDashboardContextValue>({
+  org: null,
+  refreshOrg: () => {},
+});
 
 export function useOrgDashboard() {
   return useContext(OrgDashboardContext);

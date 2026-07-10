@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -11,12 +10,9 @@ import {
   MoreVertical,
   X,
   CheckCircle2,
-  Calendar,
-  AlignLeft,
-  UploadCloud,
   Loader2,
   AlertCircle,
-  Target,
+  Power,
 } from "lucide-react";
 import { useOrgDashboard } from "@/lib/context/OrgDashboardContext";
 import { createClient } from "@/lib/supabase/client";
@@ -44,6 +40,8 @@ export default function StoreManagementPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
+  const [isError, setIsError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const fetchSubTokos = useCallback(async () => {
     if (!org?.id_toko) { setLoading(false); return; }
@@ -90,6 +88,12 @@ export default function StoreManagementPage() {
     setTimeout(() => setIsSuccess(false), 3000);
   };
 
+  const showErrorToast = (message: string) => {
+    setErrorMessage(message);
+    setIsError(true);
+    setTimeout(() => setIsError(false), 5000);
+  };
+
   const openAddModal = () => {
     setModalMode("add");
     setCurrentItem({
@@ -128,9 +132,29 @@ export default function StoreManagementPage() {
       setIsDeleteModalOpen(false);
       showSuccessToast("Proker berhasil dihapus!");
       await fetchSubTokos();
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("[OrgDashboard - Stores] Delete error:", err);
-      alert(`Gagal menghapus proker. Error: ${err.message || err.details || JSON.stringify(err)}`);
+      const msg = err instanceof Error ? err.message : JSON.stringify(err);
+      showErrorToast(`Gagal menghapus proker: ${msg}`);
+    }
+  };
+
+  const handleToggleStatus = async (item: SubToko) => {
+    const supabase = createClient();
+    const newStatus = item.status === "active" ? "inactive" : "active";
+    
+    try {
+      const { error } = await supabase
+        .from("sub_toko")
+        .update({ status: newStatus })
+        .eq("id_sub_toko", item.id_sub_toko);
+
+      if (error) throw error;
+      showSuccessToast(`Proker berhasil di${newStatus === "active" ? "aktifkan" : "nonaktifkan"}.`);
+      await fetchSubTokos();
+    } catch (err: unknown) {
+      console.error("Toggle status error:", err);
+      showErrorToast("Gagal mengubah status proker.");
     }
   };
 
@@ -139,7 +163,7 @@ export default function StoreManagementPage() {
       case "active":
         return { label: "Aktif", color: "bg-emerald-100 text-emerald-700" };
       case "inactive":
-        return { label: "Selesai", color: "bg-slate-100 text-slate-600" };
+        return { label: "Nonaktif", color: "bg-slate-100 text-slate-600" };
       case "suspended":
         return { label: "Ditangguhkan", color: "bg-amber-100 text-amber-700" };
       default:
@@ -174,7 +198,7 @@ export default function StoreManagementPage() {
 
   return (
     <div className="max-w-6xl mx-auto space-y-6 relative">
-      {/* Toast Notification */}
+      {/* Toast Notifications */}
       <AnimatePresence>
         {isSuccess && (
           <motion.div
@@ -187,15 +211,26 @@ export default function StoreManagementPage() {
             <span className="text-sm font-semibold">{successMessage}</span>
           </motion.div>
         )}
+        {isError && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-red-50 text-red-700 px-4 py-3 rounded-xl shadow-lg border border-red-200 max-w-sm"
+          >
+            <AlertCircle className="w-5 h-5 shrink-0" />
+            <span className="text-sm font-semibold">{errorMessage}</span>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            Manajemen Toko (Proker)
+            Manajemen Sub-Toko (Proker)
           </h1>
           <p className="text-sm text-slate-500">
-            Kelola pendaftaran, edit data, atau nonaktifkan akun panitia proker
+            Kelola informasi dan status sub-toko (proker)
             Anda.
           </p>
         </div>
@@ -260,6 +295,12 @@ export default function StoreManagementPage() {
                         className="flex items-center gap-2 px-3 py-2 text-sm text-slate-600 hover:bg-slate-50 rounded-lg text-left"
                       >
                         <Edit2 className="w-4 h-4" /> Edit
+                      </button>
+                      <button
+                        onClick={() => handleToggleStatus(item)}
+                        className="flex items-center gap-2 px-3 py-2 text-sm text-amber-600 hover:bg-amber-50 rounded-lg text-left"
+                      >
+                        <Power className="w-4 h-4" /> {item.status === "active" ? "Nonaktifkan" : "Aktifkan"}
                       </button>
                       <button
                         onClick={() => openDeleteModal(item)}

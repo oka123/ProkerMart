@@ -26,6 +26,7 @@ interface OrderRow {
   id_sub_toko: string;
   total_harga: number;
   tgl_pesan: string;
+  status_pesanan: string;
 }
 
 export default function ReportsPage() {
@@ -56,13 +57,14 @@ export default function ReportsPage() {
       ];
       setSubTokoOptions(options);
 
-      // Fetch all orders for sub_tokos under this toko
+      // Fetch only 'selesai' orders — cancelled/pending orders must not inflate revenue
       const subTokoIds = (subTokos ?? []).map((st) => st.id_sub_toko);
       if (subTokoIds.length > 0) {
         let query = supabase
           .from("pesanan")
-          .select("id_pesanan, id_sub_toko, total_harga, tgl_pesan")
-          .in("id_sub_toko", subTokoIds);
+          .select("id_pesanan, id_sub_toko, total_harga, tgl_pesan, status_pesanan")
+          .in("id_sub_toko", subTokoIds)
+          .eq("status_pesanan", "selesai");
 
         if (timeFilter !== "all") {
           const date = new Date();
@@ -80,6 +82,7 @@ export default function ReportsPage() {
             id_sub_toko: o.id_sub_toko,
             total_harga: Number(o.total_harga) || 0,
             tgl_pesan: o.tgl_pesan,
+            status_pesanan: o.status_pesanan,
           }))
         );
       }
