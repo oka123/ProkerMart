@@ -8,6 +8,7 @@ export interface DashboardSubToko {
   nama_proker: string;
   nama_org: string;
   role: string;
+  logo?: string;
 }
 
 interface DashboardContextValue {

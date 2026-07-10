@@ -2,17 +2,19 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import {
   Building2,
   Store,
   PieChart,
-  PlusCircle,
   FileText,
   Users,
-  Loader2,
   Menu,
   X,
+  Bell,
+  UserCircle,
+  HelpCircle,
+  Loader2,
 } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { LogoutButton } from "@/components/logout-button";
@@ -38,76 +40,116 @@ export default function OrgDashboardLayout({
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  useEffect(() => {
+  const fetchOrgData = useCallback(async () => {
     const supabase = createClient();
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      if (!session?.user) {
-        router.replace("/auth/login");
+    const { data: { session } } = await supabase.auth.getSession();
+
+    if (!session?.user) {
+      router.replace("/auth/login");
+      return;
+    }
+
+    try {
+      // Check if user owns an organisasi directly
+      const { data: orgData } = await supabase
+        .from("organisasi")
+        .select("id_organisasi, id_pengguna, nama_organisasi, nomor_sk, status_verifikasi, logo")
+        .eq("id_pengguna", session.user.id)
+        .maybeSingle();
+
+      let organisasi = orgData;
+
+      // If not a direct owner, check organisasi_member
+      if (!organisasi) {
+        const { data: memberData } = await supabase
+          .from("organisasi_member")
+          .select("id_organisasi, organisasi(id_organisasi, id_pengguna, nama_organisasi, nomor_sk, status_verifikasi, logo)")
+          .eq("id_pengguna", session.user.id)
+          .is("id_sub_toko", null)
+          .order("joined_at", { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (memberData?.organisasi) {
+          const o = Array.isArray(memberData.organisasi)
+            ? memberData.organisasi[0]
+            : memberData.organisasi;
+          organisasi = o;
+        }
+      }
+
+      if (!organisasi) {
+        console.error("[OrgDashboard] No organisasi found for user");
+        router.replace("/explore");
         return;
       }
 
-      try {
-        // Check if user owns an organisasi directly
-        const { data: orgData } = await supabase
-          .from("organisasi")
-          .select("id_organisasi, id_pengguna, nama_organisasi, nomor_sk, status_verifikasi")
-          .eq("id_pengguna", session.user.id)
-          .maybeSingle();
+      // Fetch toko for this organisasi
+      let tokoData: { id_toko: string; nama_toko: string } | null = null;
+      const { data: existingToko } = await supabase
+        .from("toko")
+        .select("id_toko, nama_toko")
+        .eq("id_organisasi", organisasi.id_organisasi)
+        .maybeSingle();
 
-        let organisasi = orgData;
-
-        // If not a direct owner, check organisasi_member
-        if (!organisasi) {
-          const { data: memberData } = await supabase
-            .from("organisasi_member")
-            .select("id_organisasi, organisasi(id_organisasi, id_pengguna, nama_organisasi, nomor_sk, status_verifikasi)")
-            .eq("id_pengguna", session.user.id)
-            .limit(1)
-            .maybeSingle();
-
-          if (memberData?.organisasi) {
-            const o = Array.isArray(memberData.organisasi)
-              ? memberData.organisasi[0]
-              : memberData.organisasi;
-            organisasi = o;
-          }
-        }
-
-        if (!organisasi) {
-          console.error("[OrgDashboard] No organisasi found for user");
-          router.replace("/explore");
-          return;
-        }
-
-        // Fetch toko for this organisasi
-        const { data: tokoData } = await supabase
+      if (existingToko) {
+        tokoData = existingToko;
+      } else {
+        // Auto-create toko if not exists
+        console.log("[OrgDashboard] Toko not found — auto-creating for organisasi:", organisasi.id_organisasi);
+        const { data: newToko, error: createError } = await supabase
           .from("toko")
+          .insert({
+            id_organisasi: organisasi.id_organisasi,
+            nama_toko: organisasi.nama_organisasi,
+            deskripsi: `Toko resmi ${organisasi.nama_organisasi}`,
+            status: "active",
+          })
           .select("id_toko, nama_toko")
-          .eq("id_organisasi", organisasi.id_organisasi)
-          .maybeSingle();
+          .single();
 
-        setOrg({
-          id_pengguna: session.user.id,
-          id_organisasi: organisasi.id_organisasi,
-          nama_organisasi: organisasi.nama_organisasi,
-          nomor_sk: organisasi.nomor_sk,
-          status_verifikasi: organisasi.status_verifikasi,
-          id_toko: tokoData?.id_toko ?? "",
-          nama_toko: tokoData?.nama_toko ?? organisasi.nama_organisasi,
-          email: session.user.email ?? "",
-        });
-      } catch (err) {
-        console.error("[OrgDashboard - Layout] Error:", err);
-        router.replace("/explore");
-      } finally {
-        setLoading(false);
+        if (createError) {
+          console.error("[OrgDashboard - Layout] Auto-create toko error:", createError);
+          // Non-fatal: proceed without toko, pages will show empty state
+        } else {
+          tokoData = newToko;
+        }
       }
-    });
+
+      // Fetch unread notifications count
+      const { count: unreadCount } = await supabase
+        .from("notifikasi")
+        .select("*", { count: "exact", head: true })
+        .eq("id_pengguna", session.user.id)
+        .eq("status_dibaca", false);
+
+      setOrg({
+        id_pengguna: session.user.id,
+        id_organisasi: organisasi.id_organisasi,
+        nama_organisasi: organisasi.nama_organisasi,
+        nomor_sk: organisasi.nomor_sk,
+        status_verifikasi: organisasi.status_verifikasi,
+        id_toko: tokoData?.id_toko ?? "",
+        nama_toko: tokoData?.nama_toko ?? organisasi.nama_organisasi,
+        email: session.user.email ?? "",
+        unreadNotifications: unreadCount ?? 0,
+        logo: organisasi.logo || undefined,
+      });
+    } catch (err) {
+      console.error("[OrgDashboard - Layout] Error:", err);
+      router.replace("/explore");
+    } finally {
+      setLoading(false);
+    }
   }, [router]);
+
+  useEffect(() => {
+    fetchOrgData();
+  }, [fetchOrgData]);
 
   const navigation = [
     { name: "Ringkasan Organisasi", href: "/org-dashboard", icon: PieChart },
-    { name: "Manajemen Toko", href: "/org-dashboard/stores", icon: Store },
+    { name: "Manajemen Sub-Toko", href: "/org-dashboard/stores", icon: Store },
     { name: "Laporan Agregat", href: "/org-dashboard/agregat", icon: FileText },
     {
       name: "Manajemen Anggota",
@@ -115,9 +157,14 @@ export default function OrgDashboardLayout({
       icon: Users,
     },
     {
-      name: "Profil Organisasi",
+      name: "Pengaturan Organisasi",
       href: "/org-dashboard/settings",
       icon: Building2,
+    },
+    {
+      name: "Bantuan",
+      href: "/org-dashboard/bantuan",
+      icon: HelpCircle,
     },
   ];
 
@@ -178,9 +225,17 @@ export default function OrgDashboardLayout({
               Panel Organisasi
             </p>
             <div className="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
-              <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold">
-                {initials}
-              </div>
+              {org?.logo ? (
+                <img
+                  src={org.logo}
+                  alt={org.nama_organisasi}
+                  className="w-10 h-10 rounded-lg object-cover bg-white"
+                />
+              ) : (
+                <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold">
+                  {initials}
+                </div>
+              )}
               <div className="min-w-0">
                 <p className="text-sm font-bold text-white truncate">
                   {org?.nama_organisasi ?? "—"}
@@ -206,8 +261,8 @@ export default function OrgDashboardLayout({
                   key={item.name}
                   href={item.href}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                      ? "bg-primary-600 text-white"
-                      : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                    ? "bg-primary-600 text-white"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
                     }`}
                 >
                   <Icon
@@ -221,6 +276,34 @@ export default function OrgDashboardLayout({
         </div>
 
         <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-col gap-2">
+          <Link
+            href="/org-dashboard/notifications"
+            className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+              pathname === "/org-dashboard/notifications"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <Bell className="w-5 h-5" /> Notifikasi
+            </div>
+            {org?.unreadNotifications ? (
+              <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                {org.unreadNotifications}
+              </span>
+            ) : null}
+          </Link>
+          <Link
+            href="/org-dashboard/account"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 ${
+              pathname === "/org-dashboard/account"
+                ? "bg-slate-800 text-white"
+                : "text-slate-400 hover:bg-slate-800 hover:text-white"
+            }`}
+          >
+            <UserCircle className="w-5 h-5" /> Akun Saya
+          </Link>
+
           <SwitchRoleButton
             currentRoute="/org-dashboard"
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors w-full"
@@ -256,9 +339,17 @@ export default function OrgDashboardLayout({
                   Panel Organisasi
                 </p>
                 <div className="flex items-center gap-3 bg-slate-800 p-3 rounded-lg border border-slate-700">
-                  <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
-                    {initials}
-                  </div>
+                  {org?.logo ? (
+                    <img
+                      src={org.logo}
+                      alt={org.nama_organisasi}
+                      className="w-10 h-10 rounded-lg object-cover shrink-0 bg-white"
+                    />
+                  ) : (
+                    <div className="w-10 h-10 bg-primary-600 rounded-lg flex items-center justify-center text-white font-bold shrink-0">
+                      {initials}
+                    </div>
+                  )}
                   <div className="min-w-0">
                     <p className="text-sm font-bold text-white truncate">
                       {org?.nama_organisasi ?? "—"}
@@ -284,8 +375,8 @@ export default function OrgDashboardLayout({
                       key={item.name}
                       href={item.href}
                       className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${isActive
-                          ? "bg-primary-600 text-white"
-                          : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                        ? "bg-primary-600 text-white"
+                        : "text-slate-400 hover:bg-slate-800 hover:text-white"
                         }`}
                     >
                       <Icon
@@ -299,6 +390,36 @@ export default function OrgDashboardLayout({
             </div>
 
             <div className="p-4 border-t border-slate-800 bg-slate-950 flex flex-col gap-2 shrink-0">
+              <Link
+                href="/org-dashboard/notifications"
+                className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  pathname === "/org-dashboard/notifications"
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <div className="flex items-center gap-3">
+                  <Bell className="w-5 h-5" /> Notifikasi
+                </div>
+                {org?.unreadNotifications ? (
+                  <span className="bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">
+                    {org.unreadNotifications}
+                  </span>
+                ) : null}
+              </Link>
+              <Link
+                href="/org-dashboard/account"
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors mb-2 ${
+                  pathname === "/org-dashboard/account"
+                    ? "bg-slate-800 text-white"
+                    : "text-slate-400 hover:bg-slate-800 hover:text-white"
+                }`}
+                onClick={() => setIsMobileMenuOpen(false)}
+              >
+                <UserCircle className="w-5 h-5" /> Akun Saya
+              </Link>
+
               <SwitchRoleButton
                 currentRoute="/org-dashboard"
                 className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors w-full"
@@ -328,7 +449,7 @@ export default function OrgDashboardLayout({
 
         {/* Main scrollable content */}
         <main className="flex-1 overflow-y-auto bg-slate-50 p-4 sm:p-6 lg:p-8">
-          <OrgDashboardContext.Provider value={{ org }}>
+          <OrgDashboardContext.Provider value={{ org, refreshOrg: fetchOrgData }}>
             {children}
           </OrgDashboardContext.Provider>
         </main>

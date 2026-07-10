@@ -1,10 +1,12 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Save, ShieldAlert, CheckCircle2, Loader2, Trash2 } from "lucide-react";
+import { UserPlus, Save, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrgDashboard } from "@/lib/context/OrgDashboardContext";
 import { createClient } from "@/lib/supabase/client";
+import { inviteAndAddMember } from "./actions";
+
 
 const ROLES = [
   "ketua",
@@ -12,10 +14,6 @@ const ROLES = [
   "sekretaris",
   "bendahara",
   "ketua_pelaksana",
-  "divisi_acara",
-  "divisi_danus",
-  "divisi_humas",
-  "anggota_staff",
 ];
 
 const ROLE_LABELS: Record<string, string> = {
@@ -24,10 +22,6 @@ const ROLE_LABELS: Record<string, string> = {
   sekretaris: "Sekretaris",
   bendahara: "Bendahara",
   ketua_pelaksana: "Ketua Pelaksana",
-  divisi_acara: "Divisi Acara",
-  divisi_danus: "Divisi Danus",
-  divisi_humas: "Divisi Humas",
-  anggota_staff: "Anggota Staff",
 };
 
 interface ScopeOption {
@@ -53,10 +47,9 @@ export default function MembersPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("");
-  const [filterScope, setFilterScope] = useState<"all" | "org" | "proker">("all");
   const [newMember, setNewMember] = useState({
     email: "",
-    jabatan: "anggota_staff",
+    jabatan: "ketua",
     id_sub_toko: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -67,7 +60,7 @@ export default function MembersPage() {
 
     try {
       let scopeOptions: ScopeOption[] = [
-        { id: "", name: "Pengurus Inti Organisasi" },
+        { id: "", name: "Inti Organisasi" },
       ];
 
       // Fetch sub_toko list for scope options only if toko exists
@@ -85,7 +78,7 @@ export default function MembersPage() {
           })),
         ];
       }
-      
+
       setScopes(scopeOptions);
 
       // Fetch members from organisasi_member with pengguna data
@@ -94,6 +87,7 @@ export default function MembersPage() {
         .select("id_member, id_pengguna, jabatan, id_sub_toko, pengguna(nama, email)")
         .eq("id_organisasi", org.id_organisasi);
 
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const parsed: MemberRow[] = (membersData ?? []).map((m: any) => {
         const pengguna = Array.isArray(m.pengguna) ? m.pengguna[0] : m.pengguna;
         return {
@@ -112,9 +106,10 @@ export default function MembersPage() {
     } finally {
       setLoading(false);
     }
-  }, [org?.id_organisasi, org?.id_toko]);
+  }, [org]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchData();
   }, [fetchData]);
 
@@ -129,75 +124,31 @@ export default function MembersPage() {
     if (!org?.id_organisasi || !newMember.email) return;
     setIsSubmitting(true);
 
-    const supabase = createClient();
-
     try {
-      // Find the pengguna by email
-      const { data: pengguna, error: findError } = await supabase
-        .from("pengguna")
-        .select("id_pengguna")
-        .eq("email", newMember.email)
-        .maybeSingle();
+      const result = await inviteAndAddMember(
+        org.id_organisasi,
+        newMember.email,
+        newMember.jabatan,
+        newMember.id_sub_toko || null
+      );
 
-      if (findError || !pengguna) {
-        alert("Email tidak ditemukan. Pastikan pengguna sudah terdaftar di ProkerMart.");
+      if (!result.success) {
+        alert(result.error);
         return;
       }
 
-      // Insert into organisasi_member
-      const { error: insertError } = await supabase
-        .from("organisasi_member")
-        .insert({
-          id_pengguna: pengguna.id_pengguna,
-          id_organisasi: org.id_organisasi,
-          id_sub_toko: newMember.id_sub_toko || null,
-          jabatan: newMember.jabatan,
-        });
-
-      if (insertError) {
-        if (insertError.code === "23505") {
-          alert("Pengguna ini sudah menjadi anggota organisasi.");
-        } else {
-          throw insertError;
-        }
-        return;
-      }
-
-      showSuccessToast("Anggota baru berhasil ditambahkan!");
-      setNewMember({ email: "", jabatan: "anggota_staff", id_sub_toko: "" });
+      showSuccessToast("Berhasil ditambahkan. Jika belum punya akun, email undangan telah dikirim.");
+      setNewMember({ email: "", jabatan: "ketua", id_sub_toko: "" });
       setShowAddForm(false);
       await fetchData();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("[OrgDashboard - Members] Add error:", err);
-      let errorMessage = "Gagal menambahkan anggota.";
-      if (err?.message) {
-        errorMessage = err.message;
-      } else if (typeof err === 'object') {
-        errorMessage = JSON.stringify(err);
-      }
-      alert(errorMessage);
+      alert("Gagal menambahkan anggota.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const updateMemberRole = async (id_member: string, jabatan: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("organisasi_member")
-      .update({ jabatan })
-      .eq("id_member", id_member);
-
-    if (error) {
-      console.error("[OrgDashboard - Members] Update role error:", error);
-      alert("Gagal mengubah jabatan.");
-      return;
-    }
-
-    setMembers((prev) =>
-      prev.map((m) => (m.id_member === id_member ? { ...m, jabatan } : m))
-    );
-  };
 
   const updateMemberScope = async (id_member: string, id_sub_toko: string) => {
     const supabase = createClient();
@@ -216,6 +167,28 @@ export default function MembersPage() {
       prev.map((m) =>
         m.id_member === id_member
           ? { ...m, id_sub_toko: id_sub_toko || null }
+          : m
+      )
+    );
+  };
+
+  const updateMemberJabatan = async (id_member: string, jabatan: string) => {
+    const supabase = createClient();
+    const { error } = await supabase
+      .from("organisasi_member")
+      .update({ jabatan })
+      .eq("id_member", id_member);
+
+    if (error) {
+      console.error("[OrgDashboard - Members] Update jabatan error:", error);
+      alert("Gagal mengubah jabatan.");
+      return;
+    }
+
+    setMembers((prev) =>
+      prev.map((m) =>
+        m.id_member === id_member
+          ? { ...m, jabatan }
           : m
       )
     );
@@ -240,16 +213,8 @@ export default function MembersPage() {
     setMembers((prev) => prev.filter((m) => m.id_member !== id_member));
   };
 
-  const filteredMembers = members.filter((member) =>
-    filterScope === "all"
-      ? true
-      : filterScope === "org"
-        ? !member.id_sub_toko
-        : !!member.id_sub_toko
-  );
-
   const getScopeName = (id_sub_toko: string | null) => {
-    if (!id_sub_toko) return "Pengurus Inti Organisasi";
+    if (!id_sub_toko) return "Inti Organisasi";
     return scopes.find((s) => s.id === id_sub_toko)?.name ?? "Proker";
   };
 
@@ -386,38 +351,6 @@ export default function MembersPage() {
         )}
       </AnimatePresence>
 
-      <div className="flex flex-wrap gap-3 items-center">
-        <span className="text-sm font-semibold text-slate-700">
-          Filter Anggota:
-        </span>
-        {[
-          { id: "all", label: "Semua" },
-          { id: "org", label: "Pengurus Organisasi" },
-          { id: "proker", label: "Anggota Proker" },
-        ].map((filter) => (
-          <button
-            key={filter.id}
-            type="button"
-            onClick={() =>
-              setFilterScope(filter.id as "all" | "org" | "proker")
-            }
-            className={`text-sm px-4 py-2 rounded-full border transition ${
-              filterScope === filter.id
-                ? "bg-slate-900 text-white border-slate-900"
-                : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
-            }`}
-          >
-            {filter.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 flex gap-3 text-blue-800">
-        <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5 text-blue-600" />
-        <p className="text-sm">
-          <strong>Tips:</strong> Anggota harus sudah punya akun ProkerMart. Masukkan email mereka untuk menambahkannya ke organisasi.
-        </p>
-      </div>
 
       {/* Data Table */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
@@ -426,24 +359,24 @@ export default function MembersPage() {
             <thead className="bg-slate-50 text-slate-500 font-medium border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-1/4">Nama Anggota</th>
-                <th className="px-6 py-4 w-1/4">Email</th>
-                <th className="px-6 py-4 w-1/4">Jabatan</th>
-                <th className="px-6 py-4 w-1/4">Penugasan / Proker</th>
+                <th className="px-6 py-4 w-1/5">Email</th>
+                <th className="px-6 py-4 w-1/5">Jabatan</th>
+                <th className="px-6 py-4 w-1/5">Penugasan / Proker</th>
                 <th className="px-6 py-4 text-center">Aksi</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filteredMembers.length === 0 ? (
+              {members.length === 0 ? (
                 <tr>
                   <td
                     colSpan={5}
                     className="px-6 py-8 text-center text-slate-500"
                   >
-                    Belum ada anggota untuk filter ini.
+                    Belum ada anggota.
                   </td>
                 </tr>
               ) : (
-                filteredMembers.map((member) => (
+                members.map((member) => (
                   <tr
                     key={member.id_member}
                     className="hover:bg-slate-50 transition-colors group"
@@ -464,13 +397,12 @@ export default function MembersPage() {
                       </div>
                     </td>
                     <td className="px-6 py-4 text-slate-600">{member.email}</td>
+
                     <td className="px-6 py-4">
                       <select
                         value={member.jabatan}
-                        onChange={(e) =>
-                          updateMemberRole(member.id_member, e.target.value)
-                        }
-                        className="border border-slate-200 bg-white hover:bg-slate-50 rounded-lg py-1.5 px-2 text-sm text-slate-700 font-medium cursor-pointer focus:ring-2 focus:ring-slate-900 outline-none w-full shadow-sm transition-all"
+                        onChange={(e) => updateMemberJabatan(member.id_member, e.target.value)}
+                        className="border border-slate-200 rounded-lg py-1.5 px-2 text-sm text-slate-700 cursor-pointer focus:ring-2 focus:ring-slate-900 outline-none w-full bg-white hover:bg-slate-50 transition-colors shadow-sm"
                       >
                         {ROLES.map((r) => (
                           <option key={r} value={r}>
@@ -479,17 +411,17 @@ export default function MembersPage() {
                         ))}
                       </select>
                     </td>
+
                     <td className="px-6 py-4">
                       <select
                         value={member.id_sub_toko ?? ""}
                         onChange={(e) =>
                           updateMemberScope(member.id_member, e.target.value)
                         }
-                        className={`border rounded-lg py-1.5 px-2 text-sm font-semibold cursor-pointer focus:ring-2 focus:ring-slate-900 outline-none w-full shadow-sm transition-all ${
-                          !member.id_sub_toko
+                        className={`border rounded-lg py-1.5 px-2 text-sm font-semibold cursor-pointer focus:ring-2 focus:ring-slate-900 outline-none w-full shadow-sm transition-all ${!member.id_sub_toko
                             ? "border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100"
                             : "border-emerald-200 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
-                        }`}
+                          }`}
                       >
                         {scopes.map((s) => (
                           <option key={s.id} value={s.id}>

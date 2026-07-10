@@ -12,9 +12,11 @@ type Role = "pembeli" | "organisasi";
 function SignUpFormInner() {
   const searchParams = useSearchParams();
   const redirectAfter = searchParams.get("redirect") ?? null;
+  const inviteEmail = searchParams.get("email") ?? "";
+  
   const [role, setRole] = useState<Role>("pembeli");
   const [fullName, setFullName] = useState("");
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(inviteEmail);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -172,10 +174,11 @@ function SignUpFormInner() {
             id="email"
             type="email"
             required
+            readOnly={!!inviteEmail}
             placeholder="nama@email.com"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all"
+            className={`w-full px-4 py-3 rounded-xl border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all ${inviteEmail ? 'bg-slate-100 cursor-not-allowed' : 'bg-slate-50'}`}
           />
         </div>
 

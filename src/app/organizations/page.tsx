@@ -98,7 +98,7 @@ export default function OrganizationsPage() {
               id: org.id_organisasi,
               name: org.nama_organisasi,
               description: description,
-              verified: org.status_verifikasi === "Disetujui",
+              verified: org.status_verifikasi === "verified",
               totalProker,
               activeProducts,
               color: COLORS[index % COLORS.length],

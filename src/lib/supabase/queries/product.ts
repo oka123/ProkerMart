@@ -32,7 +32,9 @@ const PRODUCT_SELECT = `
       logo,
       organisasi (
         id_organisasi,
-        nama_organisasi
+        nama_organisasi,
+        logo,
+        deskripsi
       )
     )
   )

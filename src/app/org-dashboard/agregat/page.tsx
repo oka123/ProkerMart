@@ -10,6 +10,8 @@ import {
   BarChart3,
   Loader2,
   Store,
+  Calendar,
+  LayoutList
 } from "lucide-react";
 import { useOrgDashboard } from "@/lib/context/OrgDashboardContext";
 import { createClient } from "@/lib/supabase/client";
@@ -20,9 +22,11 @@ interface SubTokoOption {
 }
 
 interface OrderRow {
+  id_pesanan: string;
   id_sub_toko: string;
   total_harga: number;
   tgl_pesan: string;
+  status_pesanan: string;
 }
 
 export default function ReportsPage() {
@@ -31,6 +35,7 @@ export default function ReportsPage() {
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedProker, setSelectedProker] = useState("all");
+  const [timeFilter, setTimeFilter] = useState("all");
 
   const fetchData = useCallback(async () => {
     if (!org?.id_toko) { setLoading(false); return; }
@@ -52,19 +57,32 @@ export default function ReportsPage() {
       ];
       setSubTokoOptions(options);
 
-      // Fetch all orders for sub_tokos under this toko
+      // Fetch only 'selesai' orders — cancelled/pending orders must not inflate revenue
       const subTokoIds = (subTokos ?? []).map((st) => st.id_sub_toko);
       if (subTokoIds.length > 0) {
-        const { data: ordersData } = await supabase
+        let query = supabase
           .from("pesanan")
-          .select("id_sub_toko, total_harga, tgl_pesan")
-          .in("id_sub_toko", subTokoIds);
+          .select("id_pesanan, id_sub_toko, total_harga, tgl_pesan, status_pesanan")
+          .in("id_sub_toko", subTokoIds)
+          .eq("status_pesanan", "selesai");
+
+        if (timeFilter !== "all") {
+          const date = new Date();
+          if (timeFilter === "7d") date.setDate(date.getDate() - 7);
+          else if (timeFilter === "30d") date.setMonth(date.getMonth() - 1);
+          else if (timeFilter === "1y") date.setFullYear(date.getFullYear() - 1);
+          query = query.gte("tgl_pesan", date.toISOString());
+        }
+
+        const { data: ordersData } = await query;
 
         setOrders(
           (ordersData ?? []).map((o) => ({
+            id_pesanan: o.id_pesanan,
             id_sub_toko: o.id_sub_toko,
             total_harga: Number(o.total_harga) || 0,
             tgl_pesan: o.tgl_pesan,
+            status_pesanan: o.status_pesanan,
           }))
         );
       }
@@ -73,7 +91,7 @@ export default function ReportsPage() {
     } finally {
       setLoading(false);
     }
-  }, [org?.id_toko]);
+  }, [org?.id_toko, timeFilter]);
 
   useEffect(() => {
     fetchData();
@@ -144,12 +162,20 @@ export default function ReportsPage() {
         return;
       }
 
-      // Fetch detail_pesanan to count sales
+      // Fetch detail_pesanan to count sales for filtered orders
       const productIds = products.map((p) => p.id_produk);
+      const orderIds = orders.map((o) => o.id_pesanan);
+
+      if (orderIds.length === 0) {
+        setTopProducts([]);
+        return;
+      }
+
       const { data: details } = await supabase
         .from("detail_pesanan")
-        .select("id_produk, jumlah")
-        .in("id_produk", productIds);
+        .select("id_produk, jumlah, id_pesanan")
+        .in("id_produk", productIds)
+        .in("id_pesanan", orderIds);
 
       const salesMap: Record<string, number> = {};
       for (const d of details ?? []) {
@@ -169,7 +195,28 @@ export default function ReportsPage() {
     };
 
     fetchTopProducts();
-  }, [org?.id_toko, selectedProker, subTokoOptions]);
+  }, [org?.id_toko, selectedProker, subTokoOptions, orders]);
+
+  const prokerPerformance = useMemo(() => {
+    if (selectedProker !== "all") return [];
+    
+    const performanceMap: Record<string, { name: string; revenue: number; orders: number }> = {};
+    
+    subTokoOptions.forEach((opt) => {
+      if (opt.id !== "all") {
+        performanceMap[opt.id] = { name: opt.name, revenue: 0, orders: 0 };
+      }
+    });
+
+    filteredOrders.forEach((o) => {
+      if (performanceMap[o.id_sub_toko]) {
+        performanceMap[o.id_sub_toko].revenue += o.total_harga;
+        performanceMap[o.id_sub_toko].orders += 1;
+      }
+    });
+
+    return Object.values(performanceMap).sort((a, b) => b.revenue - a.revenue);
+  }, [filteredOrders, selectedProker, subTokoOptions]);
 
   const formatRupiah = (number: number) =>
     new Intl.NumberFormat("id-ID", {
@@ -201,6 +248,23 @@ export default function ReportsPage() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3">
+          {/* Time Filter */}
+          <div className="relative">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Calendar className="h-4 w-4 text-slate-400" />
+            </div>
+            <select
+              value={timeFilter}
+              onChange={(e) => setTimeFilter(e.target.value)}
+              className="pl-10 pr-8 py-2.5 bg-slate-50 border border-slate-200 text-sm font-medium rounded-xl text-slate-700 focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 appearance-none w-full sm:w-auto"
+            >
+              <option value="all">Semua Waktu</option>
+              <option value="7d">1 Minggu Terakhir</option>
+              <option value="30d">1 Bulan Terakhir</option>
+              <option value="1y">1 Tahun Terakhir</option>
+            </select>
+          </div>
+
           {/* Proker Filter */}
           <div className="relative">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -381,6 +445,50 @@ export default function ReportsPage() {
           </div>
         </div>
       </div>
+
+      {/* Laporan Tiap Proker (Hanya muncul jika Semua Proker dipilih) */}
+      {selectedProker === "all" && (
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden mt-6">
+          <div className="p-6 border-b border-slate-200 flex items-center gap-2">
+            <LayoutList className="w-5 h-5 text-primary-600" />
+            <h2 className="text-lg font-bold text-slate-900">Performa Tiap Proker</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-50 text-slate-500 text-sm border-b border-slate-200">
+                  <th className="p-4 font-medium">Nama Proker</th>
+                  <th className="p-4 font-medium text-right">Total Pesanan</th>
+                  <th className="p-4 font-medium text-right">Total Pendapatan</th>
+                  <th className="p-4 font-medium text-right">Rata-rata Nilai</th>
+                </tr>
+              </thead>
+              <tbody>
+                {prokerPerformance.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="p-6 text-center text-slate-400 text-sm">
+                      Belum ada data proker.
+                    </td>
+                  </tr>
+                ) : (
+                  prokerPerformance.map((p, idx) => (
+                    <tr key={idx} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                      <td className="p-4 text-sm font-medium text-slate-900">{p.name}</td>
+                      <td className="p-4 text-sm text-slate-600 text-right">{p.orders}</td>
+                      <td className="p-4 text-sm font-semibold text-emerald-600 text-right">
+                        {formatRupiah(p.revenue)}
+                      </td>
+                      <td className="p-4 text-sm text-slate-600 text-right">
+                        {formatRupiah(p.orders > 0 ? p.revenue / p.orders : 0)}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -1,0 +1,8 @@
+-- Add profile and contact fields to organisasi table
+
+ALTER TABLE organisasi
+ADD COLUMN IF NOT EXISTS logo VARCHAR(255),
+ADD COLUMN IF NOT EXISTS deskripsi TEXT,
+ADD COLUMN IF NOT EXISTS email_resmi VARCHAR(255),
+ADD COLUMN IF NOT EXISTS no_telp VARCHAR(50),
+ADD COLUMN IF NOT EXISTS sosmed VARCHAR(255);
