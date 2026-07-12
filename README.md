@@ -471,11 +471,11 @@ Buat pesanan (status: menunggu_pembayaran)
       ↓
 Pilih metode: QRIS / COD
       ↓
-[Online - Midtrans Snap]            [Tunai/Offline]
+[Online - Midtrans Snap]         
+      ↓                                 
+Midtrans payment page                   [COD]
       ↓                                   ↓
-Midtrans payment page               Rekap offline
-      ↓                                   ↓
-Midtrans webhook                    Admin konfirmasi
+Midtrans webhook                Pembayaran diterima
       ↓                                   ↓
 status: menunggu_konfirmasi → diproses → siap_diambil/dikirim → selesai
 ```
