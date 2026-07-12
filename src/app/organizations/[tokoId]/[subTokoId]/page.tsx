@@ -57,6 +57,7 @@ function SubTokoDetailContent() {
             deskripsi,
             foto_sampul,
             jadwal_operasional,
+            status,
             id_toko,
             toko ( nama_toko ),
             produk (
@@ -78,7 +79,7 @@ function SubTokoDetailContent() {
           .single();
 
         if (error) throw error;
-        if (!data) {
+        if (!data || data.status !== 'active') {
           router.push(`/organizations/${tokoId}`);
           return;
         }

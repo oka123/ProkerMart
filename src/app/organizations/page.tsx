@@ -60,7 +60,8 @@ export default function OrganizationsPage() {
               deskripsi,
               sub_toko (
                 id_sub_toko,
-                produk ( id_produk )
+                status,
+                produk ( id_produk, status_aktif )
               )
             )
           `);
@@ -77,12 +78,12 @@ export default function OrganizationsPage() {
 
             if (mainToko) {
               description = mainToko.deskripsi || description;
-              const subTokos = mainToko.sub_toko || [];
+              const subTokos = (mainToko.sub_toko || []).filter((st: any) => st.status === 'active');
               totalProker = subTokos.length;
 
               subTokos.forEach((st: any) => {
                 if (st.produk) {
-                  activeProducts += st.produk.length;
+                  activeProducts += st.produk.filter((p: any) => p.status_aktif !== false).length;
                 }
               });
             }

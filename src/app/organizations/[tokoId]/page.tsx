@@ -59,13 +59,15 @@ function TokoDetailContent() {
               nama_proker,
               deskripsi,
               foto_sampul,
+              status,
               produk (
                 id_produk,
                 nama_produk,
                 harga,
                 foto,
                 kategori,
-                stok
+                stok,
+                status_aktif
               )
             )
           `,
@@ -82,13 +84,14 @@ function TokoDetailContent() {
         const org = Array.isArray(data.organisasi)
           ? data.organisasi[0]
           : data.organisasi;
-        const subTokos = data.sub_toko || [];
+        const subTokos = (data.sub_toko || []).filter((st: any) => st.status === 'active');
 
         // Aggregate all products
         let allProducts: any[] = [];
         subTokos.forEach((st: any) => {
           if (st.produk) {
-            const mappedProducts = st.produk.map((p: any) => ({
+            const activeProducts = st.produk.filter((p: any) => p.status_aktif !== false);
+            const mappedProducts = activeProducts.map((p: any) => ({
               ...p,
               subTokoId: st.id_sub_toko,
               subTokoName: st.nama_proker,

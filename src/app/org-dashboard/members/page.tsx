@@ -5,7 +5,7 @@ import { UserPlus, Save, CheckCircle2, Loader2, Trash2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useOrgDashboard } from "@/lib/context/OrgDashboardContext";
 import { createClient } from "@/lib/supabase/client";
-import { inviteAndAddMember } from "./actions";
+import { inviteAndAddMember, updateMemberScopeAction } from "./actions";
 
 
 const ROLES = [
@@ -151,15 +151,10 @@ export default function MembersPage() {
 
 
   const updateMemberScope = async (id_member: string, id_sub_toko: string) => {
-    const supabase = createClient();
-    const { error } = await supabase
-      .from("organisasi_member")
-      .update({ id_sub_toko: id_sub_toko || null })
-      .eq("id_member", id_member);
+    const result = await updateMemberScopeAction(id_member, id_sub_toko || null);
 
-    if (error) {
-      console.error("[OrgDashboard - Members] Update scope error:", error);
-      alert("Gagal mengubah penugasan.");
+    if (!result.success) {
+      alert(result.error);
       return;
     }
 

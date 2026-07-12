@@ -111,3 +111,64 @@ export async function inviteAndAddMember(
     return { success: false, error: error.message || "Terjadi kesalahan sistem." };
   }
 }
+
+export async function updateMemberScopeAction(
+  id_member: string,
+  id_sub_toko: string | null
+) {
+  try {
+    const adminClient = createAdminClient();
+
+    // 1. Dapatkan data anggota organisasi
+    const { data: orgMember, error: orgError } = await adminClient
+      .from("organisasi_member")
+      .select("*")
+      .eq("id_member", id_member)
+      .single();
+
+    if (orgError || !orgMember) {
+      throw new Error("Anggota tidak ditemukan.");
+    }
+
+    // 2. Update organisasi_member
+    const { error: updateError } = await adminClient
+      .from("organisasi_member")
+      .update({ id_sub_toko })
+      .eq("id_member", id_member);
+
+    if (updateError) throw updateError;
+
+    // 3. Sync ke sub_toko_member
+    if (id_sub_toko) {
+      let prokerRole = 'AnggotaPenggalianDana'; // default
+      if (orgMember.jabatan === 'ketua_pelaksana' || orgMember.jabatan === 'ketua') prokerRole = 'KetuaProker';
+      else if (orgMember.jabatan === 'wakil_ketua') prokerRole = 'WakilProker';
+      else if (orgMember.jabatan === 'sekretaris') prokerRole = 'SekretarisProker';
+      else if (orgMember.jabatan === 'bendahara') prokerRole = 'BendaharaProker';
+
+      // Cek apakah sudah ada di sub_toko_member untuk pengguna ini di proker yang sama
+      const { data: existingStm } = await adminClient
+        .from("sub_toko_member")
+        .select("id_member")
+        .eq("id_pengguna", orgMember.id_pengguna)
+        .eq("id_sub_toko", id_sub_toko)
+        .maybeSingle();
+
+      if (!existingStm) {
+        await adminClient
+          .from("sub_toko_member")
+          .insert({
+            id_sub_toko: id_sub_toko,
+            id_pengguna: orgMember.id_pengguna,
+            role: prokerRole,
+            status: 'active'
+          });
+      }
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("[updateMemberScopeAction Error]", error);
+    return { success: false, error: error.message || "Gagal mengubah penugasan." };
+  }
+}
