@@ -3,11 +3,21 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Search, Store, Truck, Loader2, Star, X, Timer, MessageCircle } from "lucide-react";
+import {
+  Search,
+  Store,
+  Truck,
+  Loader2,
+  Star,
+  X,
+  Timer,
+  Download,
+} from "lucide-react";
 import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { UserSidebar } from "@/components/user/UserSidebar";
 import { MobileHeader } from "@/components/MobileHeader";
+import { ExportPurchaseModal } from "@/components/user/ExportPurchaseModal";
 import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
@@ -115,6 +125,13 @@ export default function PurchasePage() {
   const [isSubmittingRating, setIsSubmittingRating] = useState(false);
   const [isReadOnlyRating, setIsReadOnlyRating] = useState(false);
 
+  // Export Modal state
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
+
+  // Search state
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isMobileSearchVisible, setIsMobileSearchVisible] = useState(false);
+
   const fetchOrders = useCallback(async () => {
     try {
       const {
@@ -189,12 +206,20 @@ export default function PurchasePage() {
               },
             })) || [];
 
-          const hasDelivery = items.some((item: any) => item.metode_pengambilan === "delivery");
-          const hasPickup = items.some((item: any) => item.metode_pengambilan === "pickup");
+          const hasDelivery = items.some(
+            (item: any) => item.metode_pengambilan === "delivery",
+          );
+          const hasPickup = items.some(
+            (item: any) => item.metode_pengambilan === "pickup",
+          );
           const isHybrid = hasDelivery && hasPickup;
 
           let statusText = getStatusText(p.status_pesanan);
-          if (isHybrid && (p.status_pesanan === "siap_diambil" || p.status_pesanan === "dikirim")) {
+          if (
+            isHybrid &&
+            (p.status_pesanan === "siap_diambil" ||
+              p.status_pesanan === "dikirim")
+          ) {
             statusText = "Pesanan sedang dikirim / siap diambil.";
           }
 
@@ -471,10 +496,15 @@ export default function PurchasePage() {
     return result.sort((a, b) => b.id.localeCompare(a.id));
   }, [orders]);
 
-  const filteredOrders =
-    activeTab === "Semua"
-      ? processedOrders
-      : processedOrders.filter((o) => o.statusLabel === activeTab);
+  const filteredOrders = processedOrders.filter((o) => {
+    const matchesTab = activeTab === "Semua" || o.statusLabel === activeTab;
+    const searchLower = searchTerm.toLowerCase();
+    const matchesSearch =
+      o.id.toLowerCase().includes(searchLower) ||
+      o.storeName.toLowerCase().includes(searchLower) ||
+      o.items.some((item) => item.name.toLowerCase().includes(searchLower));
+    return matchesTab && matchesSearch;
+  });
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("id-ID", {
@@ -517,6 +547,9 @@ export default function PurchasePage() {
               backHref="/user"
               rightActions={["search", "chat"]}
               chatCount={0}
+              onSearchClick={() =>
+                setIsMobileSearchVisible(!isMobileSearchVisible)
+              }
             />
 
             <div className="sticky z-30 w-full bg-white shadow-sm md:rounded-sm top-14 lg:top-0">
@@ -543,15 +576,26 @@ export default function PurchasePage() {
               </div>
             </div>
 
-            <div className="hidden lg:block">
-              <div className="relative group">
+            <div className="flex flex-col sm:flex-row gap-2 px-4 md:px-0">
+              <div
+                className={`${isMobileSearchVisible ? "block" : "hidden"} lg:block relative group flex-1`}
+              >
                 <input
                   type="text"
-                  placeholder="Kamu bisa cari berdasarkan Nama Penjual, No. Pesanan atau Nama Produk"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  placeholder="Cari Nama Penjual, No. Pesanan atau Nama Produk"
                   className="w-full px-12 py-3 text-sm transition-all border-none rounded-sm bg-slate-200 focus:outline-none focus:ring-1 focus:ring-primary-600"
                 />
                 <Search className="absolute w-5 h-5 -translate-y-1/2 left-4 top-1/2 text-slate-400" />
               </div>
+              <button
+                onClick={() => setIsExportModalOpen(true)}
+                className="flex items-center justify-center gap-2 px-6 py-3 text-sm font-semibold text-white transition-colors bg-primary-600 rounded-sm hover:bg-primary-700 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4" />
+                Export Laporan
+              </button>
             </div>
 
             <div className="space-y-3">
@@ -614,9 +658,18 @@ export default function PurchasePage() {
                           </span> */}
                           <span className="text-xs sm:text-sm font-bold uppercase text-primary-600 whitespace-nowrap">
                             {(() => {
-                              const hasDelivery = order.items.some((i: any) => i.metode_pengambilan === "delivery");
-                              const hasPickup = order.items.some((i: any) => i.metode_pengambilan === "pickup");
-                              if (hasDelivery && hasPickup && (order.status === "siap_diambil" || order.status === "dikirim")) {
+                              const hasDelivery = order.items.some(
+                                (i: any) => i.metode_pengambilan === "delivery",
+                              );
+                              const hasPickup = order.items.some(
+                                (i: any) => i.metode_pengambilan === "pickup",
+                              );
+                              if (
+                                hasDelivery &&
+                                hasPickup &&
+                                (order.status === "siap_diambil" ||
+                                  order.status === "dikirim")
+                              ) {
                                 return "Dikirim / Siap Diambil";
                               }
                               return order.status.replace("_", " ");
@@ -754,6 +807,14 @@ export default function PurchasePage() {
                             <>
                               <button
                                 onClick={() =>
+                                  handleCompleteOrder(order.id_pesanan)
+                                }
+                                className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-primary-600 text-primary-600 sm:text-sm hover:bg-primary-50 whitespace-nowrap"
+                              >
+                                Pesanan Diterima
+                              </button>
+                              <button
+                                onClick={() =>
                                   handleOpenChat(order.storeId, order.storeName)
                                 }
                                 className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-slate-200 text-slate-600 sm:text-sm hover:bg-slate-50 whitespace-nowrap"
@@ -763,30 +824,42 @@ export default function PurchasePage() {
                             </>
                           ) : order.statusLabel === "Sedang Dikemas" ? (
                             <>
-                              {order.status === "menunggu_konfirmasi" && (() => {
-                                const elapsed = Math.floor((Date.now() - new Date(order.tgl_pesan).getTime()) / 1000);
-                                const remaining = 10 - elapsed;
-                                if (remaining > 0) {
-                                  return (
-                                    <button
-                                      onClick={() => handleCancelOrder(order.id_pesanan, order.id)}
-                                      className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-red-300 text-red-600 sm:text-sm hover:bg-red-50 whitespace-nowrap flex items-center justify-center gap-1.5"
-                                    >
-                                      <Timer className="w-3.5 h-3.5" /> Batalkan ({remaining}d)
-                                    </button>
+                              {order.status === "menunggu_konfirmasi" &&
+                                (() => {
+                                  const elapsed = Math.floor(
+                                    (Date.now() -
+                                      new Date(order.tgl_pesan).getTime()) /
+                                      1000,
                                   );
-                                }
-                                return (
-                                  <a
-                                    href="https://wa.me/6281234567890"
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-slate-200 text-slate-600 sm:text-sm hover:bg-slate-50 whitespace-nowrap flex items-center justify-center gap-1.5"
-                                  >
-                                    <MessageCircle className="w-3.5 h-3.5" /> Hubungi CS
-                                  </a>
-                                );
-                              })()}
+                                  const remaining = 10 - elapsed;
+                                  if (remaining > 0) {
+                                    return (
+                                      <button
+                                        onClick={() =>
+                                          handleCancelOrder(
+                                            order.id_pesanan,
+                                            order.id,
+                                          )
+                                        }
+                                        className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-red-300 text-red-600 sm:text-sm hover:bg-red-50 whitespace-nowrap flex items-center justify-center gap-1.5"
+                                      >
+                                        <Timer className="w-3.5 h-3.5" />{" "}
+                                        Batalkan ({remaining}d)
+                                      </button>
+                                    );
+                                  }
+                                  // return (
+                                  //   <a
+                                  //     href="https://wa.me/6281234567890"
+                                  //     target="_blank"
+                                  //     rel="noopener noreferrer"
+                                  //     className="flex-1 px-4 py-2 text-xs font-medium border rounded-sm sm:flex-none border-slate-200 text-slate-600 sm:text-sm hover:bg-slate-50 whitespace-nowrap flex items-center justify-center gap-1.5"
+                                  //   >
+                                  //     <MessageCircle className="w-3.5 h-3.5" />{" "}
+                                  //     Hubungi CS
+                                  //   </a>
+                                  // );
+                                })()}
                               <button
                                 onClick={() =>
                                   handleOpenChat(order.storeId, order.storeName)
@@ -937,6 +1010,11 @@ export default function PurchasePage() {
           </motion.div>
         </div>
       )}
+
+      <ExportPurchaseModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+      />
     </div>
   );
 }

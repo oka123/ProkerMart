@@ -170,7 +170,6 @@ export function PwaInstallPrompt() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem("pwa-prompt-dismissed", Date.now().toString());
     setShowPrompt(false);
   };
 
