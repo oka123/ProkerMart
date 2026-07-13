@@ -17,6 +17,7 @@ interface MobileHeaderProps {
   cartCount?: number;
   chatCount?: number;
   className?: string;
+  onSearchClick?: () => void;
 }
 
 export function MobileHeader({
@@ -27,6 +28,7 @@ export function MobileHeader({
   cartCount = 0,
   chatCount = 0,
   className = "",
+  onSearchClick,
 }: MobileHeaderProps) {
   return (
     <div
@@ -45,7 +47,7 @@ export function MobileHeader({
         {rightActions.map((action) => {
           if (action === "search") {
             return (
-              <button key={action} className="p-1">
+              <button key={action} onClick={onSearchClick} className="p-1">
                 <Search className="w-6 h-6 text-primary-600" />
               </button>
             );

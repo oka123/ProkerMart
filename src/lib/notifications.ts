@@ -20,7 +20,7 @@ if (process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY && process.env.VAPID_PRIVATE_KEY) {
 // Setup Nodemailer
 const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || "smtp.gmail.com",
-  port: 465, // Usually 465 for secure, 587 for TLS
+  port: 587, // Usually 465 for secure, 587 for TLS
   secure: true,
   auth: {
     user: process.env.SMTP_USER,

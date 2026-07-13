@@ -130,10 +130,6 @@ export function PushNotificationManager() {
       if (!data.user) return;
       setUser(data.user);
 
-      // If user dismissed before, skip
-      const dismissed = localStorage.getItem("pushPromptDismissed");
-      if (dismissed) return;
-
       if (Notification.permission === "granted") {
         // Already granted — silently re-subscribe
         subscribePush(data.user.id);
@@ -171,7 +167,6 @@ export function PushNotificationManager() {
       .then(async (permission) => {
         if (permission !== "granted") {
           console.warn("[Push] Permission not granted:", permission);
-          localStorage.setItem("pushPromptDismissed", Date.now().toString());
           setShowPrompt(false);
           return;
         }
@@ -189,7 +184,6 @@ export function PushNotificationManager() {
   };
 
   const handleDismiss = () => {
-    localStorage.setItem("pushPromptDismissed", Date.now().toString());
     setShowPrompt(false);
   };
 
