@@ -37,6 +37,17 @@ function SubTokoDetailContent() {
 
   const [subToko, setSubToko] = useState<SubTokoDetail | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+
+  useEffect(() => {
+    const supabase = createBrowserClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
+    );
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setIsLoggedIn(!!user);
+    });
+  }, []);
 
   useEffect(() => {
     async function fetchSubTokoDetail() {
@@ -210,6 +221,11 @@ function SubTokoDetailContent() {
             <div className="flex-none self-start md:self-center">
               <button
                 onClick={() => {
+                  if (!isLoggedIn) {
+                    const currentPath = window.location.pathname + window.location.search;
+                    router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+                    return;
+                  }
                   window.dispatchEvent(
                     new CustomEvent("openProkerChat", {
                       detail: {

@@ -93,6 +93,11 @@ export function ProductActions({
   };
 
   const handleChatSeller = () => {
+    if (!isLoggedIn) {
+      const currentPath = window.location.pathname + window.location.search;
+      router.push(`/auth/login?redirect=${encodeURIComponent(currentPath)}`);
+      return;
+    }
     window.dispatchEvent(
       new CustomEvent("openProkerChat", {
         detail: {

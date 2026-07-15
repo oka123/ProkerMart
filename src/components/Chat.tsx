@@ -60,7 +60,7 @@ function ChatInner() {
     getRole();
   }, [user, supabase]);
 
-  // if (loading || !user || role === "admin") return null;
+  if (loading || !user || role === "admin") return null;
 
   // Path exclusion logic
   const isExcludedPath = (path: string) => {
